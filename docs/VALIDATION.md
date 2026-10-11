@@ -1,4 +1,31 @@
-# Current validation — scroll storytelling and element inspection (v5)
+# Current validation — viewport reading area and shared transitions (v6)
+
+Verified locally on 2026-10-10. Before editing, the exact v5 source was archived to `../versions/20261010-150412-scroll-inspection-v5/`: 175 files, 4,042,346 archive bytes. Archive file content, modes and per-file hashes were compared with the source. The SHA-256 (`1d2aea20c05c15bfe6d89004a7fa513cb4c3cadbb2176aa41be556ad101249f6`) was verified again after editing. The archive excludes reproducible dependencies, builds and local caches; it includes source, assets, lockfile, documentation, tests and existing screenshots.
+
+- `npm test`: 23 tests passed. Two new viewport-geometry regressions cover fully visible short headings/bottom actions, entry, exit, offscreen and viewport-spanning content. The wider entrance interval is checked without reducing the fully visible reading area.
+- `npm run typecheck`: passed. `npm run build`: passed after the final CSS changes; the same five routes were generated. Existing non-failing experimental and route-classification notices remain.
+- Production homepage inspected at 1280 × 720: the scientific-tools heading spans 175–237 px, four feature cards 261–504 px, and invitation 528–627 px. All six groups have opacity 1, zero blur and zero offset simultaneously. Content spanning a viewport also remains readable.
+- Actual downward scrolling showed staggered partially entering cards at opacity approximately 0.96, 0.92, 0.88 and 0.84, with corresponding blur/translation. Offscreen content uses the full 52 px entrance amplitude. The entrance interval is approximately 22% of the viewport below the sticky header, capped at 200 px and bounded by each item's height; fully visible items always stay clear.
+- Shared motion verified on discovery (5 groups), documentation (12), contribution (6) and about (6), while homepage retains 16 independently measured groups. Focused form sections remain clear. Dynamic route/form content is observed for measurement updates. Reduced-motion hook/CSS fallback and homepage Pause behavior are retained; the operating-system preference was not changed.
+- All five pages checked at 1440, 1024, 768, 390 and 320 px: document width matches viewport width. Only the periodic table has intentional horizontal scrolling.
+- Actual pointer input verified with no selected elements: immediately crossing Fe did not replace the preview; after the 350 ms dwell, Fe reference values appeared with zero selected elements and an empty query. Pinning the information prevented keyboard inspection of other elements from changing it. Hover/focus inspection does not alter search state. Clear selected elements resets the reference and pin when a selection is cleared.
+- Final fixed-height references checked for He, Hf, N, Og and Rf at 1440, 768 and 320 px. Every desktop/tablet card is 114 px high; every mobile card is 184 px high. There was no internal horizontal or vertical overflow, including long oxidation-state lists, names and predicted configurations. Property columns extend toward the right edge; orbital letters remain italic and occupancies superscript. No reference values were modified.
+- Final production navigation checked: Fe/O selection → Search commits `type=elements&query=Fe%2CO#results`, while input stays `Fe-O` and two elements remain selected → Documentation → Contribute → About → browser Back/Forward. Route-specific content and shared transitions appeared correctly. No new console warnings or errors were observed during that journey.
+- The new interface entry is recorded in platform history, separately from pending scientific database releases. No API contract, scientific data, chart, contribution-validation logic or dependency changes were made.
+
+## Current artifacts
+
+- `outputs/reading-area-v6-desktop.png`
+- `outputs/scroll-transition-v6-desktop.png`
+- `outputs/hover-inspection-v6-desktop.png`
+- `outputs/hover-inspection-v6-mobile.png`
+- `outputs/layout-check-v6.json`
+
+Development preview remains `http://127.0.0.1:5173/`. The temporary production server and agent-created QA tab are closed after verification; the original development server remains running. No deployment was performed. Statistics, materials records, user-map intensity, scientific documentation and actual contribution submission still await verified data/backend support.
+
+---
+
+# Previous validation — scroll storytelling and element inspection (v5)
 
 Verified locally on 2026-10-10. The exact pre-edit v4 archive is in `../versions/20261010-131653-discovery-layout-v4/`: 169 files, 3,773,232 archive bytes, with a per-file manifest and restoration guide. Archive contents, file modes and hashes were checked before editing, and the archive SHA-256 was checked again after implementation.
 

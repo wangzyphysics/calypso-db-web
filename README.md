@@ -36,14 +36,14 @@ React 19.2, TypeScript 5.9, Vinext 1.0.0-beta.5 / Vite 8, Tailwind 4. Existing s
 | Search entry and discovery preview   | `app/explore/page.tsx`, `components/materials/search-input.tsx`, `components/materials/search-workspace.tsx`  |
 | Interactive periodic table           | `components/materials/periodic-table.tsx`, `lib/materials/elements.ts`                                        |
 | Element reference information        | `components/materials/element-information.tsx`, `lib/materials/element-reference.ts`                          |
-| Scroll section transitions           | `components/materials/scroll-reveal.ts`, `scroll-reveal-page.tsx`, `lib/materials/scroll-reveal.ts`             |
+| Scroll section transitions           | `components/materials/scroll-reveal.ts`, `scroll-reveal-page.tsx`, `lib/materials/scroll-reveal.ts`           |
 | Documentation and updates            | `app/docs/page.tsx`, `lib/materials/site-information.ts`                                                      |
 | Local contribution workspace         | `app/contribute/page.tsx`, `components/materials/contribution-workspace.tsx`, `lib/materials/contribution.ts` |
 | Statistics and exact record previews | `components/materials/data-sections.tsx`                                                                      |
 | API schemas and adapter              | `lib/materials/api.ts`, `.env.example`                                                                        |
 | URL query normalization              | `lib/materials/search.ts`                                                                                     |
 | About and citation availability      | `app/about/page.tsx`                                                                                          |
-| Contract, draft and motion checks    | `tests/materials.test.ts`, `tests/contribution.test.ts`, `tests/scroll-reveal.test.ts`                          |
+| Contract, draft and motion checks    | `tests/materials.test.ts`, `tests/contribution.test.ts`, `tests/scroll-reveal.test.ts`                        |
 
 ## Available now
 
