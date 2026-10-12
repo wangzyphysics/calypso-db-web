@@ -51,7 +51,15 @@ export interface SubmitContributionBatchRequest {
   requestedVisibility: RequestedVisibility;
   computationRequested: boolean;
   permission: { confirmed: true; policyVersion: string };
-  contributor: { name: string; email: string };
+  contributor: {
+    name: string;
+    email: string;
+    institution?: string;
+    department?: string;
+    researchGroup?: string;
+    careerStage?: string;
+    orcid?: string;
+  }; // Explicit attribution snapshot, distinct from server-owned ownerId.
   records: ContributionRecordInput[];
 }
 export type ReviewStatus =

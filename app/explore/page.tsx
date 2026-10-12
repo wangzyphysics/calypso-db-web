@@ -1,3 +1,4 @@
+import { AuthGate } from "@/components/accounts/auth-gate";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { SearchWorkspace } from "@/components/materials/search-workspace";
@@ -14,7 +15,9 @@ export default function ExplorePage() {
         </main>
       }
     >
-      <SearchWorkspace />
+      <AuthGate>
+        <SearchWorkspace />
+      </AuthGate>
     </Suspense>
   );
 }

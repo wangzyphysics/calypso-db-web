@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useAuth } from "@/components/accounts/auth-context";
+import { contributionAttribution } from "@/lib/accounts/model";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -47,6 +49,7 @@ import { unpackZip, type ArchiveEntry } from "@/lib/materials/zip-import";
 import { contactEmail, contactHref } from "@/lib/materials/site-information";
 
 export function BatchContributionWorkspace() {
+  const { user, ownerKey } = useAuth();
   const [draft, setDraft] = useState<BatchDraft>(newBatch);
   const [origin, setOrigin] = useState<Origin>("experimental");
   const [defaultType, setDefaultType] = useState<DataType>("raman");
@@ -77,7 +80,7 @@ export function BatchContributionWorkspace() {
     }
     setBusy("Opening draft…");
     operationActive.current = true;
-    readLocalBatch(draftId)
+    readLocalBatch(draftId, ownerKey)
       .then((batch) => {
         if (!current) return;
         if (!batch)
@@ -102,7 +105,7 @@ export function BatchContributionWorkspace() {
       current = false;
       operationActive.current = false;
     };
-  }, [draftId]);
+  }, [draftId, ownerKey]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (dirty && draft.files.length) {
@@ -329,7 +332,7 @@ export function BatchContributionWorkspace() {
     try {
       if (!draft.files.length || !draft.records.length)
         throw new Error("Add at least one record before saving.");
-      const saved = await saveLocalBatch(draft);
+      const saved = await saveLocalBatch(draft, ownerKey);
       setDraft(saved);
       setDirty(false);
       setMessage(
@@ -418,8 +421,9 @@ export function BatchContributionWorkspace() {
           <Info size={17} />
           <p>
             <strong>Local draft workspace</strong> Files stay in this browser.
-            Save drafts to return later, or export a copy. Account, review and
-            VASP workflow services are awaiting connection.
+            Save account-specific drafts to return later, or export a copy.
+            Submission, review and VASP workflow services are awaiting
+            connection.
           </p>
         </div>
         <section
@@ -820,12 +824,43 @@ export function BatchContributionWorkspace() {
         <section
           className="batch-contributor surface-card"
           aria-labelledby="batch-contributor-title"
+          data-unsaved={dirty ? "true" : "false"}
           data-reveal
         >
           <div className="batch-section-heading">
             <span>03</span>
             <h2 id="batch-contributor-title">Attribution & draft</h2>
           </div>
+          {user && (
+            <div className="use-profile-attribution">
+              <div>
+                <strong>Use my research profile</strong>
+                <p>
+                  Copy your saved name, contact and affiliation into this batch.
+                  Later profile edits will not change this attribution.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="secondary-link"
+                disabled={disabled}
+                onClick={() => {
+                  change({
+                    contributor: contributionAttribution(user.profile),
+                    permissionConfirmed: false,
+                  });
+                  setMessage(
+                    "Saved profile copied into this draft. Review attribution and confirm permission again.",
+                  );
+                }}
+              >
+                Apply my profile
+              </button>
+              <Link href="/account" className="text-link">
+                Edit profile
+              </Link>
+            </div>
+          )}
           <fieldset
             disabled={disabled}
             className="record-field-grid batch-control-fieldset"
@@ -839,6 +874,7 @@ export function BatchContributionWorkspace() {
                 onChange={(e) =>
                   change({
                     contributor: { ...draft.contributor, name: e.target.value },
+                    permissionConfirmed: false,
                   })
                 }
               />
@@ -856,10 +892,46 @@ export function BatchContributionWorkspace() {
                       ...draft.contributor,
                       email: e.target.value,
                     },
+                    permissionConfirmed: false,
                   })
                 }
               />
             </label>
+            {(
+              [
+                "institution",
+                "department",
+                "researchGroup",
+                "careerStage",
+                "orcid",
+              ] as const
+            ).map((field) => (
+              <label key={field}>
+                {
+                  {
+                    institution: "Institution",
+                    department: "Department",
+                    researchGroup: "Research group",
+                    careerStage: "Career stage",
+                    orcid: "ORCID iD",
+                  }[field]
+                }{" "}
+                <span className="account-optional">Optional</span>
+                <input
+                  value={draft.contributor[field]}
+                  maxLength={300}
+                  onChange={(e) =>
+                    change({
+                      contributor: {
+                        ...draft.contributor,
+                        [field]: e.target.value,
+                      },
+                      permissionConfirmed: false,
+                    })
+                  }
+                />
+              </label>
+            ))}
           </fieldset>
           <label className="permission-checkbox">
             <input

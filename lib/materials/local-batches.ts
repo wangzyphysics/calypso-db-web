@@ -2,7 +2,12 @@
 import { batchSchema, type BatchDraft } from "./batch-contribution";
 
 const databaseName = "calypso-contribution-drafts";
-const storeName = "batches";
+const legacyStoreName = "batches",
+  storeName = "account-batches";
+function checkOwner(ownerKey: string) {
+  if (!ownerKey || ownerKey.length > 250)
+    throw new Error("Sign in before accessing account drafts.");
+}
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (!("indexedDB" in window)) {
@@ -11,10 +16,18 @@ function openDatabase(): Promise<IDBDatabase> {
       );
       return;
     }
-    const request = indexedDB.open(databaseName, 1);
+    const request = indexedDB.open(databaseName, 2);
     let blocked = false;
-    request.onupgradeneeded = () =>
-      request.result.createObjectStore(storeName, { keyPath: "id" });
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(legacyStoreName))
+        request.result.createObjectStore(legacyStoreName, { keyPath: "id" });
+      if (!request.result.objectStoreNames.contains(storeName)) {
+        const store = request.result.createObjectStore(storeName, {
+          keyPath: ["ownerKey", "id"],
+        });
+        store.createIndex("ownerKey", "ownerKey");
+      }
+    };
     request.onerror = () =>
       reject(
         new Error(
@@ -36,11 +49,12 @@ function openDatabase(): Promise<IDBDatabase> {
 async function transact<T>(
   mode: IDBTransactionMode,
   action: (store: IDBObjectStore) => IDBRequest<T>,
+  name = storeName,
 ): Promise<T> {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(storeName, mode);
-    const request = action(transaction.objectStore(storeName));
+    const transaction = db.transaction(name, mode);
+    const request = action(transaction.objectStore(name));
     let result: T;
     request.onsuccess = () => {
       result = request.result;
@@ -59,28 +73,40 @@ async function transact<T>(
     };
   });
 }
-export async function saveLocalBatch(batch: BatchDraft) {
+export async function saveLocalBatch(batch: BatchDraft, ownerKey: string) {
+  checkOwner(ownerKey);
   const checked = batchSchema.parse({
     ...batch,
     updatedAt: new Date().toISOString(),
   });
-  await transact("readwrite", (store) => store.put(checked));
+  await transact("readwrite", (store) =>
+    store.put({ ownerKey, id: checked.id, batch: checked }),
+  );
   return checked;
 }
-export async function listLocalBatches() {
+export async function listLocalBatches(ownerKey: string) {
+  checkOwner(ownerKey);
   const values = await transact<unknown[]>("readonly", (store) =>
-    store.getAll(),
+    store.index("ownerKey").getAll(IDBKeyRange.only(ownerKey)),
   );
   return values
-    .map((value) => batchSchema.parse(value))
+    .map((value) => batchSchema.parse((value as { batch: unknown }).batch))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
-export async function readLocalBatch(id: string): Promise<BatchDraft | null> {
-  const value = await transact<unknown>("readonly", (store) => store.get(id));
-  return value ? batchSchema.parse(value) : null;
+export async function readLocalBatch(
+  id: string,
+  ownerKey: string,
+): Promise<BatchDraft | null> {
+  checkOwner(ownerKey);
+  const value = await transact<{ batch: unknown } | undefined>(
+    "readonly",
+    (store) => store.get([ownerKey, id]),
+  );
+  return value ? batchSchema.parse(value.batch) : null;
 }
-export async function deleteLocalBatch(id: string) {
-  await transact("readwrite", (store) => store.delete(id));
+export async function deleteLocalBatch(id: string, ownerKey: string) {
+  checkOwner(ownerKey);
+  await transact("readwrite", (store) => store.delete([ownerKey, id]));
 }
 export function downloadText(
   name: string,
@@ -98,5 +124,34 @@ export function exportLocalBatch(batch: BatchDraft) {
   downloadText(
     "calypso-batch-" + batch.id + ".json",
     JSON.stringify(batchSchema.parse(batch), null, 2) + "\n",
+  );
+}
+
+/** Pre-account drafts are preserved; claiming copies rather than deletes them. */
+export async function listUnassignedBatches() {
+  const values = await transact<unknown[]>(
+    "readonly",
+    (store) => store.getAll(),
+    legacyStoreName,
+  );
+  return values.map((value) => batchSchema.parse(value));
+}
+export async function copyUnassignedBatch(id: string, ownerKey: string) {
+  checkOwner(ownerKey);
+  const value = await transact<unknown>(
+    "readonly",
+    (store) => store.get(id),
+    legacyStoreName,
+  );
+  if (!value) throw new Error("This unassigned draft was not found.");
+  const original = batchSchema.parse(value);
+  return saveLocalBatch(
+    {
+      ...original,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      permissionConfirmed: false,
+    },
+    ownerKey,
   );
 }

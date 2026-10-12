@@ -1,5 +1,10 @@
 "use client";
 import Link from "next/link";
+import { useAuth } from "@/components/accounts/auth-context";
+import {
+  AccountNavigation,
+  TestModeNotice,
+} from "@/components/accounts/account-navigation";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -27,9 +32,13 @@ import {
   deleteLocalBatch,
   exportLocalBatch,
   listLocalBatches,
+  listUnassignedBatches,
+  copyUnassignedBatch,
 } from "@/lib/materials/local-batches";
 
 export function MyContributions() {
+  const { ownerKey } = useAuth();
+  const [unassigned, setUnassigned] = useState<BatchDraft[]>([]);
   const params = useSearchParams();
   const [batches, setBatches] = useState<BatchDraft[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +50,7 @@ export function MyContributions() {
     setLoading(true);
     setError("");
     try {
-      setBatches(await listLocalBatches());
+      setBatches(await listLocalBatches(ownerKey));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -50,7 +59,7 @@ export function MyContributions() {
   }
   useEffect(() => {
     let active = true;
-    listLocalBatches()
+    listLocalBatches(ownerKey)
       .then((values) => {
         if (active) setBatches(values);
       })
@@ -60,10 +69,17 @@ export function MyContributions() {
       .finally(() => {
         if (active) setLoading(false);
       });
+    void listUnassignedBatches()
+      .then((values) => {
+        if (active) setUnassigned(values);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [ownerKey]);
   const requestedId = params.get("batch");
   const selected = requestedId
     ? batches.find((b) => b.id === requestedId)
@@ -84,7 +100,7 @@ export function MyContributions() {
     setDeleting(id);
     setError("");
     try {
-      await deleteLocalBatch(id);
+      await deleteLocalBatch(id, ownerKey);
       setBatches((values) => values.filter((b) => b.id !== id));
       setConfirmDelete("");
     } catch (e) {
@@ -115,13 +131,53 @@ export function MyContributions() {
             New batch
           </Link>
         </header>
+        <AccountNavigation active="contributions" />
+        <TestModeNotice />
+        {unassigned.length > 0 && (
+          <details className="unassigned-drafts">
+            <summary>
+              {unassigned.length} unassigned drafts from before accounts were
+              introduced
+            </summary>
+            <p>
+              These browser drafts have no recorded owner. Copy a draft only if
+              it belongs to you. The original is preserved, and its permissions
+              must be confirmed again.
+            </p>
+            {unassigned.map((batch) => (
+              <div key={batch.id}>
+                <span>
+                  {batch.title} · {batch.records.length} records
+                </span>
+                <button
+                  type="button"
+                  className="secondary-link"
+                  disabled={loading}
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      await copyUnassignedBatch(batch.id, ownerKey);
+                      await refresh();
+                    } catch (e) {
+                      setError((e as Error).message);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  Copy to this account
+                </button>
+              </div>
+            ))}
+          </details>
+        )}
         <div className="batch-mode-notice" data-reveal>
           <Info size={17} />
           <p>
-            <strong>This browser's drafts</strong> No account or server is
-            connected. The batches below are saved on this device. Actual
-            submission, review, publication and live VASP progress will appear
-            when their services are connected.
+            <strong>This account’s local drafts</strong> The batches below are
+            saved on this device under your current account. Actual submission,
+            review, publication and live VASP progress will appear when their
+            services are connected.
           </p>
         </div>
         <div className="workspace-summary" data-reveal>

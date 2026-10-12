@@ -1,3 +1,32 @@
+# Registration and password validation — 2026-10-12 (v8.1)
+
+- Backed up the complete v8 source before editing to `../versions/20261012-102553-accounts-v8/`: 221 files, 4,653,389 archive bytes. Archive entries were checked against the per-file SHA-256 manifest. Browser storage and reproducible dependencies/builds are separate.
+- 41 tests passed. TypeScript and the final production build passed. Tests cover mandatory registration metadata, strict registration payloads, duplicate usernames/emails, independently salted password hashes, incorrect passwords, member/private defaults, production test-mode guards and same-origin/CSRF registration contracts. Existing scientific and contribution tests still pass.
+- Browser: account, email, password/confirmation, full name, institution, research group and career stage are required during registration. Mismatched passwords show an error; successful local test registration returns to `/explore?type=elements&query=Fe-O#results`. Saved affiliation fields appear in My Profile. The new account has no administrator entry.
+- Browser: after sign-out, an incorrect password is rejected; the registered account/password signs back into the same account and returns to the original search URL. Only the two preset development identities retain passwordless test shortcuts. Synthetic test identities were used; no real identity, email, upload or calculation was submitted.
+- Final layouts at 1440, 1024, 768, 390 and 320 px have equal Sign in/Sign up card widths at every breakpoint: approximately 654, 517, 654, 339 and 269 px respectively. Heights follow each page's own content; there is no shared fixed/minimum card height. Password-to-sign-in-button spacing is 20 px. No document horizontal overflow was observed.
+- The final development and production browser checks had no console errors or warnings. The production build exposes no test registration/account shortcuts; unconfigured real registration stays disabled and provider messages explicitly await connection. Sign in/Sign up links preserve search query/hash return paths. The temporary production preview was stopped; the existing development preview was retained.
+- Actual screenshots and measurements: `outputs/signup-v8-1-preview.png`, `outputs/signup-layout-check-v8-1.json`.
+- Real registration, verification, account/password sign-in and provider callbacks still require the authentication backend. The proposed contracts and implementation guide are in `docs/AUTHENTICATION.md`. Local test registration stores a salted password hash on this device and does not verify identity.
+
+---
+
+# Account and access validation — 2026-10-12 (v8)
+
+- Backed up v7 before edits: `versions/20261012-091527-batch-contributions-v7/`, 202 files, 4,545,947 archive bytes; every archive entry verified against SHA-256 manifest, final archive checksum passed. Dependencies/builds/secrets excluded; browser draft storage is separate.
+- 38 tests passed, including return-path protection, optional profile validation, nullable provider email, attribution snapshots and legacy schema defaults, CSRF/same-origin contracts, role restrictions, test-mode guards and stale profile/role versions. TypeScript and the production build passed. Existing Vinext route-classification warning remains non-fatal.
+- Browser: anonymous `/explore?type=elements&query=Fe%2CO#results` redirects to login, local test researcher returns to the original URL with `Fe-O` input and Fe/O selections intact.
+- Browser: profile save survives refresh; Apply my profile explicitly copies saved name/institution/group/career stage into a contribution. Later profile edits leave the saved batch attribution unchanged.
+- Browser: a new synthetic Raman batch saves under the researcher; the administrator has zero saved batches and cannot retrieve the researcher's batch by its URL. No server upload or calculation occurs. The temporary QA batch was deleted through the UI; synthetic profile fields were reset.
+- Browser: administrator grants and revokes the researcher's admin role with reasons, audit records appear; member direct access to `/admin` shows access-required state. Test identities end with researcher=member and test-admin=admin.
+- Browser: login/profile/admin/contribute at 1440, 1024, 768, 390 and 320 px have no body/root horizontal overflow; mobile menu closes on account navigation. Screenshots inspected; viewport overrides reset.
+- Production preview: home/about/docs accessible anonymously; explore/account/admin/workspace/contribute redirect to sign-in, preserving destination. No local test buttons appear in production; unconfigured providers clearly report pending connection. Final browser error/warning logs are empty.
+- Observed development HMR context mismatch resolved by isolating the shared AuthContext/hook from the provider component; subsequent provider hot update and navigation had no new context errors. A temporary production preview needed restart after rebuilding to refresh Wrangler's asset inventory; after restart CSS/JS loaded and browser flows passed.
+- Screenshots: `outputs/login-v8-preview.png`; responsive measurements: `outputs/account-layout-check-v8.json`. The preview uses the existing localhost:5173 server; the temporary localhost:4176 production process was stopped.
+- Limitations: identity providers, email/SMS delivery, server authorization/roles, protected uploads, audit retention and VASP are not implemented. The local tests are explicitly not production authentication or secure data isolation. Legacy unassigned draft schema migration is tested; the current browser contained no pre-account drafts to exercise a real legacy-copy UI flow.
+
+---
+
 # Current validation — batch contributions and workspace (v7), 2026-10-11
 
 The exact v6 source was backed up before modification to `../versions/20261011-150021-viewport-reading-v6/`. The archive contains 183 files (4,296,810 bytes); per-file entries were verified at creation and the final archive SHA-256 check passes: `c65d310110bdf0a8bffdbaaae1fe9df70f6b8f74b78205ca1920864f85e44f09`.

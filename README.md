@@ -149,3 +149,9 @@ Default visibility is private; users can request public display after approval a
 Main changes: `components/materials/batch-contribution-workspace.tsx`, `contribution-record-editor.tsx`, `my-contributions.tsx`; `app/workspace/page.tsx`; `lib/materials/batch-contribution.ts`, `zip-import.ts`, `local-batches.ts`, `contribution-contract.ts`; shell navigation, documentation and scoped styles. Existing contribution entry points remain compatible, and the v1 exporter/preflight module remains for migration and format checks. Search, periodic-table behavior, scientific detail pages and pressure state were not changed.
 
 See [batch and interface design](docs/CONTRIBUTIONS.md), [API contract](docs/API_CONTRACT.md), and [validation](docs/VALIDATION.md).
+
+## Account access (v8)
+
+Public home/about/docs; sign-in required for exploration and contribution workspaces. Local test identities require development mode, loopback host and `NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS=true`. Real services take priority and never fall back to tests. See [账户与认证接入指南](docs/AUTHENTICATION.md) for test accounts, profile/draft scope, API contracts and the backend implementation sequence.
+
+`/signup` collects a username, email, password with confirmation, full name, institution, research group and career stage before registration, then returns to the original destination. Local test registration creates an unverified private member on this device; use Account on `/login` with the same username/email and password to return. Local passwords are salted PBKDF2 checks, never plaintext; only fictitious test details should be used. Real email/SMS registration and third-party signup require the identity backend; the frontend does not send messages or verify real identities itself.

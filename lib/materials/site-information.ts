@@ -11,6 +11,16 @@ export function contactHref(
 }
 export const platformUpdates = [
   {
+    date: "2026-10-12",
+    title: "Accounts and research profiles",
+    changes: [
+      "Local test sign-in, research profiles, account settings and role administration.",
+      "Dedicated sign-up with account/password, required research affiliation and return to the original discovery query.",
+      "Protected discovery entry points and explicit profile-to-contribution attribution.",
+      "Account-scoped browser drafts with preserved unassigned legacy copies; real sign-in services await connection.",
+    ],
+  },
+  {
     date: "2026-10-11",
     title: "Experimental and theoretical contribution batches",
     changes: [

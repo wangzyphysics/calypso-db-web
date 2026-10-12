@@ -1,8 +1,11 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Box, Menu, Search, UserRound } from "lucide-react";
+import { Box, Menu, Search } from "lucide-react";
 import { useState } from "react";
+import { AuthProvider } from "@/components/accounts/auth-provider";
+import { useAuth } from "@/components/accounts/auth-context";
+import { AccountMenu } from "@/components/accounts/account-menu";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -28,6 +31,7 @@ export function Brand() {
 }
 function NavigationLinks({ close = false }: { close?: boolean }) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const links = [
     { href: "/", label: "Home" },
     { href: "/explore", label: "Explore Materials" },
@@ -56,7 +60,18 @@ function NavigationLinks({ close = false }: { close?: boolean }) {
   return (
     <>
       {(close
-        ? [...links, { href: "/workspace", label: "My contributions" }]
+        ? [
+            ...links,
+            {
+              href: user ? "/account" : "/login?returnTo=%2Faccount",
+              label: user ? "My account" : "Sign in",
+            },
+            ...(!user ? [{ href: "/signup", label: "Sign up" }] : []),
+            { href: "/workspace", label: "My contributions" },
+            ...(user?.role === "admin"
+              ? [{ href: "/admin", label: "Administration" }]
+              : []),
+          ]
         : links
       ).map(renderLink)}
     </>
@@ -64,7 +79,6 @@ function NavigationLinks({ close = false }: { close?: boolean }) {
 }
 export function TopNavigation() {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
   return (
     <header className="site-header">
       <div className="container header-inner">
@@ -81,17 +95,7 @@ export function TopNavigation() {
             <Search size={19} />
           </Link>
           <span className="header-separator" />
-          <Link
-            href="/workspace"
-            className={
-              "icon-button workspace-nav-button" +
-              (pathname === "/workspace" ? " active" : "")
-            }
-            aria-label="My contributions"
-            aria-current={pathname === "/workspace" ? "page" : undefined}
-          >
-            <UserRound size={19} />
-          </Link>
+          <AccountMenu />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -122,7 +126,7 @@ export function TopNavigation() {
 }
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <AuthProvider>
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
@@ -150,6 +154,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
         </div>
       </footer>
-    </>
+    </AuthProvider>
   );
 }

@@ -130,3 +130,7 @@ The v2 JSON schema and local checks are implemented in `lib/materials/batch-cont
 [Contribution and workflow design](CONTRIBUTIONS.md) documents file limits, manifest columns, privacy, review/publication/computation/quality/ingestion states, the proposed authenticated upload interfaces, and the server-side adapter for the user's existing VASP scripts. TypeScript request/response contracts are reserved in `lib/materials/contribution-contract.ts`. The scientific protocol, numerical settings and actual script sequence are not invented by the frontend.
 
 All future public query/preview/statistics implementations must exclude private submissions and private calculated outputs on the server. Explicit public intent plus record-level approval is required before a contribution becomes eligible for public indexing. Calculation completion and ingestion do not change visibility.
+
+## Authentication and ownership (v8)
+
+See [AUTHENTICATION.md](AUTHENTICATION.md) and `lib/accounts/client.ts` for the same-origin identity BFF contract. The UI sign-in gate is not server authorization: the materials API must enforce sessions on every search and protected record/download request. Contribution ownerId must come from the server session; explicit contributor profile snapshots do not confer ownership. Local browser drafts now use mode/user-scoped IndexedDB keys, preserving pre-account drafts for explicit copying.
