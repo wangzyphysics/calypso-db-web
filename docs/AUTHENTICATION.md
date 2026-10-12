@@ -11,7 +11,21 @@
 | 普通研究用户 | researcher@calypso.test | 点击 Test researcher，无需密码    |
 | 管理员       | admin@calypso.test      | 点击 Test administrator，无需密码 |
 
-这些是明确标注的测试身份，不是真实邮箱账号。只在 `NODE_ENV=development`、明确启用开关、且浏览器主机为 localhost / 127.0.0.1 / [::1] 时可用。正式构建始终关闭；配置真实认证 API 后优先使用真实服务，不会降级为测试身份。
+这些是明确标注的测试身份，不是真实邮箱账号。本地开关只在 `NODE_ENV=development`、明确启用、且浏览器主机为 localhost / 127.0.0.1 / [::1] 时可用。默认生产构建关闭测试账户；公网演示可以单独启用下面的演示开关。配置真实认证 API 后优先使用真实服务，不会降级为测试身份。
+
+### 发布公网演示版
+
+Cloudflare 的 Build command 设置为：
+
+```sh
+NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=true npm run build
+```
+
+Deploy command 保持 `npx wrangler deploy`。也可以在 Cloudflare 的构建环境变量中设置 `NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=true`，构建命令保持 `npm run build`。这是构建时开关，修改后必须重新构建部署，单独修改 Worker 运行时变量不会更新浏览器代码。
+
+演示时保持 `NEXT_PUBLIC_AUTH_API_BASE` 为空。发布包含此代码改动的 Git 提交后，重新构建部署，访问 `/login`，可以选择 Test researcher 或 Test administrator。原来的 `NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS=true` 不会开启公网演示。
+
+账户、测试注册、资料与角色只保存在每个访问者自己的浏览器中；本机测试账户不会上传，不同设备不共享账户或草稿。页面标注 DEMO ONLY，不提供正式认证。关闭演示时去掉演示开关或设为 `false`，再重新构建部署。
 
 - 首页、About、文档保持公开。Explore、贡献编辑、我的贡献、个人资料和管理页面要求登录。
 - 访问检索深链接时，登录后保留查询、筛选和锚点。返回地址只接受已知站内产品路由。

@@ -293,12 +293,13 @@ export function LoginPage() {
                 <div>
                   <FlaskConical size={18} />
                   <strong>Preset test accounts</strong>
-                  <span>DEVELOPMENT ONLY</span>
+                  <span>DEMO ONLY</span>
                 </div>
                 <p>
-                  These two development shortcuts need no password. Newly
+                  These two demo shortcuts need no password. Newly
                   registered test accounts use the account/password form above.
-                  No real identity is verified.
+                  No real identity is verified. Account data stays in this browser
+                  and is not shared with other visitors.
                 </p>
                 {testAccounts.map((account) => (
                   <button

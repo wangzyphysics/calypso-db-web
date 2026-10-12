@@ -39,8 +39,10 @@ export const testAccounts = [
     role: "admin" as const,
   },
 ];
-/** Never a security boundary. Available only in opted-in loopback development. */
+/** Browser-only demo state, never a security boundary or a real identity service. */
 export function localTestEnabled() {
+  if (typeof window === "undefined") return false;
+  if (process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS === "true") return true;
   return (
     process.env.NODE_ENV === "development" &&
     process.env.NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS === "true" &&

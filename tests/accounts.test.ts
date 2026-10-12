@@ -237,7 +237,8 @@ test("local test accounts are disabled outside opted-in loopback development and
   const local = await import("../lib/accounts/local-test.ts");
   const testEnv = process.env as Record<string, string | undefined>;
   const oldEnv = process.env.NODE_ENV,
-    oldFlag = process.env.NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS;
+    oldFlag = process.env.NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS,
+    oldDemoFlag = process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS;
   const descriptors = ["window", "localStorage", "sessionStorage"].map(
     (key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const,
   );
@@ -264,6 +265,7 @@ test("local test accounts are disabled outside opted-in loopback development and
       configurable: true,
       value: memoryStorage(),
     });
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS = "false";
     testEnv.NODE_ENV = "development";
     process.env.NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS = "false";
     assert.equal(local.localTestEnabled(), false);
@@ -395,12 +397,27 @@ test("local test accounts are disabled outside opted-in loopback development and
       /disabled/,
     );
     await assert.rejects(local.registerTest(signup()), /disabled/);
+    location.hostname = "public.example.org";
+    process.env.NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS = "false";
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS = "true";
+    assert.equal(local.localTestEnabled(), true);
+    local.signInTest("test-admin");
+    assert.equal(local.currentTestUser()?.id, "test-admin");
+    assert.ok(local.listTestUsers().users.length > 0);
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS = "false";
+    assert.equal(local.localTestEnabled(), false);
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS = "true";
+    Reflect.deleteProperty(globalThis, "window");
+    assert.equal(local.localTestEnabled(), false);
   } finally {
     if (oldEnv === undefined) delete testEnv.NODE_ENV;
     else testEnv.NODE_ENV = oldEnv;
     if (oldFlag === undefined)
       delete process.env.NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS;
     else process.env.NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS = oldFlag;
+    if (oldDemoFlag === undefined)
+      delete process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS;
+    else process.env.NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS = oldDemoFlag;
     for (const [key, value] of descriptors) {
       if (value) Object.defineProperty(globalThis, key, value);
       else Reflect.deleteProperty(globalThis, key);
