@@ -121,36 +121,12 @@ community?: {
 
 This is an interface reservation only: the frontend does not collect IP addresses, infer location, store analytics or fabricate user counts. The base map remains neutral when aggregates are absent. Counts for CALYPSO software adoption or other websites must never be used as this database's registered-user total.
 
-## Local contribution drafts (no submission API yet)
+## Batch contributions and owner workspace (v7)
 
-`/contribute` is a separate page-scoped workspace. It does not call `fetch`, write local storage, send email, publish records or use the reserved materials query endpoints. File content and contact metadata exist only in page memory until a local JSON export; refresh/navigation clears the workspace.
+`/contribute` now prepares experimental and theoretical batches, multiple files/ZIP, explicit CSV mappings, raw attachments, and private/public-after-review intent. `/workspace` lists saved local drafts in this browser. These routes make no contribution API requests and do not publish, review or run calculations.
 
-Export shape:
+The v2 JSON schema and local checks are implemented in `lib/materials/batch-contribution.ts`. Saving persists original file bytes and metadata in same-origin IndexedDB; export contains base64 original bytes with SHA-256 checksums. Import checks those bytes and creates a new local batch identity. Legacy v1 single-structure exports migrate conservatively to private visibility with independent permission confirmation. Local persistence is not authenticated account storage.
 
-```ts
-interface LocalContributionDraft {
-  schemaVersion: 1;
-  status: "local-draft";
-  metadata: {
-    contributorName: string;
-    email: string;
-    formula: string; // Normalized text.
-    pressureGPa: number; // Finite actual recorded pressure, including zero.
-    calculationMethod: string; // Contributor-supplied, not platform-approved.
-    source: string;
-    notes: string;
-    permissionConfirmed: true;
-  };
-  structure: {
-    fileName: string;
-    format: "cif" | "poscar";
-    sha256: string; // SHA-256 of the decoded structure text encoded as UTF-8.
-    content: string;
-  };
-  preflight: { format: "cif" | "poscar"; checks: string[]; warnings: string[] };
-}
-```
+[Contribution and workflow design](CONTRIBUTIONS.md) documents file limits, manifest columns, privacy, review/publication/computation/quality/ingestion states, the proposed authenticated upload interfaces, and the server-side adapter for the user's existing VASP scripts. TypeScript request/response contracts are reserved in `lib/materials/contribution-contract.ts`. The scientific protocol, numerical settings and actual script sequence are not invented by the frontend.
 
-A draft holds one structure record. File limits are 5 MiB. Supported names are `.cif`, `POSCAR`, `.poscar` and `.vasp`. CIF checks look for a single named data block, six cell parameters and coordinate field names. POSCAR checks basic lattice scaling, nonzero cell volume, atom counts, coordinate mode and the expected numeric position rows. These checks do not validate full file syntax, symmetry, scientific correctness, metadata/structure agreement, stability or ownership.
-
-Future actual submissions require a separately agreed API, authentication, server-side file validation, permission/licensing policy and explicit review states. The confirmed process is prepare → human review → ingestion. A locally exported draft is not an accepted submission and must not enter a published record collection automatically. No endpoint names or successful submission responses are invented in this phase.
+All future public query/preview/statistics implementations must exclude private submissions and private calculated outputs on the server. Explicit public intent plus record-level approval is required before a contribution becomes eligible for public indexing. Calculation completion and ingestion do not change visibility.

@@ -1,3 +1,52 @@
+# Current validation — batch contributions and workspace (v7), 2026-10-11
+
+The exact v6 source was backed up before modification to `../versions/20261011-150021-viewport-reading-v6/`. The archive contains 183 files (4,296,810 bytes); per-file entries were verified at creation and the final archive SHA-256 check passes: `c65d310110bdf0a8bffdbaaae1fe9df70f6b8f74b78205ca1920864f85e44f09`.
+
+## Automated checks
+
+- `npm test`: all 31 tests passed, including eight batch/import/privacy/progress checks and the existing 23 checks.
+- `npm run typecheck`: passed.
+- `npm run build`: final client, SSR and RSC builds passed; `/workspace` joins the existing five routes.
+- `git diff --check`: passed. No dependency or lockfile changes.
+- Build notices about Node experimental features and Vinext static route classification are non-failing. Actual production routes were checked separately.
+
+The batch tests exercise explicit multi-curve associations, quoted/multiline CSV, required data origin, missing and ambiguous file paths, zero pressure, raw binary checksums, conservative v1 migration, legacy checksum mismatch, native ZIP expansion/CRC/path failures, one-point properties versus multi-point spectra, structure file limits, explicit publication intent and honest step-count progress.
+
+## Browser verification
+
+Synthetic fixtures were created only in the local QA directory and test fixtures. They are not real material records, are not bundled into product previews, and were never uploaded to a service. The UI labels saved QA batches as synthetic. Their temporary browser drafts were removed after checking; actual user drafts were not touched.
+
+- Development ZIP import with a manifest: three original files became four records; two distinct curves reference one original table at 0 and 10 GPa. Preview uses the chosen numeric columns, preserves zeros and source order, and applies no fitting.
+- Manifest errors are visible and leave the prior four-record batch intact.
+- Private is the initial selection. Switching requested visibility resets permission confirmation. Private VASP processing consent remains independent; it does not enable public intent.
+- Save confirms an IndexedDB transaction. Refresh, reopen through the exact draft link, edit and save were verified.
+- Exported v2 JSON was read locally: all original bytes and SHA-256 checksums exactly match the source ZIP, including the binary attachment. Private intent, processing consent and actual zero pressure are preserved.
+- Export reimport creates a second local identity; the two batches keep separate selection, visibility and record lists.
+- A property table with one numerical row displays 2.3 at its original 0 GPa coordinate as a single value, not a continuous curve.
+- An unavailable batch identifier displays Draft not found rather than silently showing another batch.
+- Local deletion uses an inline confirmation; removal and return to the empty state were verified for agent-created QA batches only.
+- Desktop/mobile viewport checks at 1440, 1024, 768, 390 and 320 px show no root/body horizontal overflow in the contribution editor or workspace. Mobile navigation includes the workspace link and closes after route navigation.
+- Form hit targets keep their position during fades, avoiding movement between pointer down and click. Section headings and surrounding introductions retain shared scroll motion; input sections retain opacity/blur transitions. All existing reduced-motion behavior remains.
+- Production Worker: `/`, `/contribute`, `/workspace`, `/docs`, `/explore?type=elements&query=Fe%2CO`, `/about` returned 200; an unavailable route returned 404.
+- Production browser: empty workspace; client navigation to contribution; simultaneous XY/POSCAR file selection; real four-point XRD preview; incomplete local draft save/reload; cleanup; Documentation and Explore navigation.
+- Existing production search: Contains elements accepts Fe-O, highlights Fe and O, commits the compatible comma-delimited query in the URL, and restores history through Back/Forward. Search API/data execution remains unconfigured.
+- No browser warnings or errors were observed in the final development and production journeys.
+
+## Artifacts
+
+- `outputs/layout-check-v7.json`
+- `outputs/workspace-v7-private.png` — actual private QA batch and independent processing intent; synthetic QA data only.
+- `outputs/workspace-v7-desktop.png`, `outputs/workspace-v7-mobile.png`, `outputs/workspace-v7-empty.png`
+- `outputs/contribute-v7-curve-desktop.png`, `outputs/contribute-v7-default.png`
+
+## Integration limits
+
+No authentication, upload/review service, ACL enforcement, public contribution indexing or VASP execution exists yet. Local privacy is a recorded submission preference, not server account protection. Original vendor formats and 2D images are retained as attachments; full crystallographic and scientific validation awaits review. Numerical protocols and the real VASP step graph must come from the existing scripts. No live percentage, submitted batch, public scientific record or standardized output was fabricated.
+
+The proposed server contracts and privacy rules are in `docs/CONTRIBUTIONS.md` and `lib/materials/contribution-contract.ts`. Existing material search, periodic-table reference values, homepage motion geometry and future material-scoped pressure architecture remain intact. No material-detail redesign or Pressure Explorer was implemented.
+
+---
+
 # Current validation — viewport reading area and shared transitions (v6)
 
 Verified locally on 2026-10-10. Before editing, the exact v5 source was archived to `../versions/20261010-150412-scroll-inspection-v5/`: 175 files, 4,042,346 archive bytes. Archive file content, modes and per-file hashes were compared with the source. The SHA-256 (`1d2aea20c05c15bfe6d89004a7fa513cb4c3cadbb2176aa41be556ad101249f6`) was verified again after editing. The archive excludes reproducible dependencies, builds and local caches; it includes source, assets, lockfile, documentation, tests and existing screenshots.

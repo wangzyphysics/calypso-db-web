@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Box, Menu, Search } from "lucide-react";
+import { Box, Menu, Search, UserRound } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,10 +53,18 @@ function NavigationLinks({ close = false }: { close?: boolean }) {
       <span key={href}>{link}</span>
     );
   };
-  return <>{links.map(renderLink)}</>;
+  return (
+    <>
+      {(close
+        ? [...links, { href: "/workspace", label: "My contributions" }]
+        : links
+      ).map(renderLink)}
+    </>
+  );
 }
 export function TopNavigation() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   return (
     <header className="site-header">
       <div className="container header-inner">
@@ -73,7 +81,17 @@ export function TopNavigation() {
             <Search size={19} />
           </Link>
           <span className="header-separator" />
-          <span className="header-label">HPCSD</span>
+          <Link
+            href="/workspace"
+            className={
+              "icon-button workspace-nav-button" +
+              (pathname === "/workspace" ? " active" : "")
+            }
+            aria-label="My contributions"
+            aria-current={pathname === "/workspace" ? "page" : undefined}
+          >
+            <UserRound size={19} />
+          </Link>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -121,6 +139,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/about">About the Database</Link>
             <Link href="/docs">Documentation &amp; Updates</Link>
             <Link href="/contribute">Contribute Data</Link>
+            <Link href="/workspace">My Contributions</Link>
             <Link href="/#team">Our Team</Link>
             <Link href="/#join-us">Contact &amp; Feedback</Link>
           </nav>

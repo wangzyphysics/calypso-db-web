@@ -1,6 +1,6 @@
 # Phase 2 architecture notes — design only
 
-The application shell owns navigation and theme. Search owns its URL query. There is no global pressure store, crystal viewer, chart, or structure interpolation in Phase 1.
+The application shell owns navigation and theme. Search owns its URL query. There is no global pressure store, material-detail crystal viewer, linked scientific chart, or structure interpolation in Phase 1. Local contribution-file previews do not create a material exploration context.
 
 Future material exploration should use:
 
@@ -39,3 +39,9 @@ Suggested next work, subject to review:
 4. Add the scoped pressure context, then integrate scientific viewers and linked charts against verified data.
 
 No Phase 2 implementation has been started.
+
+## Contributions and measurement records
+
+Experimental spectra and property measurements must retain sample identifiers, actual conditions, coordinate quantities/units, processing state and provenance independently from structures. A contributor's sample or phase label does not establish material/phase identity. Associations are explicit, and an experimental record may have no known structure.
+
+Private submission and computed output visibility must be enforced by the future backend across search, previews, statistics, files, logs and events. Platform-standard calculations create separate output records linked to immutable contribution inputs. Approval, computation completion, quality checks and ingestion are independent states. See [batch and VASP integration design](CONTRIBUTIONS.md). These contribution pages do not create a global pressure context or implement the future material-detail explorer.

@@ -11,6 +11,15 @@ export function contactHref(
 }
 export const platformUpdates = [
   {
+    date: "2026-10-11",
+    title: "Experimental and theoretical contribution batches",
+    changes: [
+      "Multi-file and ZIP drafts, CSV associations and original-value curve previews.",
+      "Private-by-default visibility, separate processing consent and persistent local batches.",
+      "Personal contribution workspace and reserved review, publication and VASP workflow contracts.",
+    ],
+  },
+  {
     date: "2026-10-10",
     title: "Viewport reading area and shared transitions",
     changes: [

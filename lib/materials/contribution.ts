@@ -12,12 +12,20 @@ const numeric = (value: string) =>
   value.trim() !== "" && Number.isFinite(Number(value));
 
 /** Basic text-format checks only; this is not a crystallographic validator. */
-export function reviewStructureFile(name: string, text: string): FileReview {
+export function reviewStructureFile(
+  name: string,
+  text: string,
+  maximumBytes = maximumStructureBytes,
+): FileReview {
   if (!text.trim()) throw new Error("The structure file is empty.");
   if (text.includes("\0"))
     throw new Error("Choose a plain-text CIF or POSCAR file.");
-  if (new TextEncoder().encode(text).byteLength > maximumStructureBytes)
-    throw new Error("Choose a structure file no larger than 5 MiB.");
+  if (new TextEncoder().encode(text).byteLength > maximumBytes)
+    throw new Error(
+      "Choose a structure file no larger than " +
+        maximumBytes / (1024 * 1024) +
+        " MiB.",
+    );
   const warnings = [
     "Only basic format checks are performed. Structure consistency, scientific validity and calculation settings require review.",
   ];

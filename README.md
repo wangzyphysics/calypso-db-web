@@ -27,23 +27,24 @@ npm run build
 
 React 19.2, TypeScript 5.9, Vinext 1.0.0-beta.5 / Vite 8, Tailwind 4. Existing starter primitives provide accessible controls, the mobile navigation sheet, select menu, empty states, and skeletons. Lucide provides lightweight scientific icons. No crystal viewer or charting library is used by the Phase 1 product.
 
-| Surface                              | Files                                                                                                         |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Homepage                             | `app/page.tsx`, `components/materials/homepage.tsx`, `pressure-hero.tsx`, `community-map.tsx`                 |
-| Application shell and navigation     | `app/layout.tsx`, `components/materials/app-shell.tsx`                                                        |
-| Tokens, theme, responsive styles     | `app/globals.css`                                                                                             |
-| Shared UI foundations                | `components/materials/foundations.tsx`                                                                        |
-| Search entry and discovery preview   | `app/explore/page.tsx`, `components/materials/search-input.tsx`, `components/materials/search-workspace.tsx`  |
-| Interactive periodic table           | `components/materials/periodic-table.tsx`, `lib/materials/elements.ts`                                        |
-| Element reference information        | `components/materials/element-information.tsx`, `lib/materials/element-reference.ts`                          |
-| Scroll section transitions           | `components/materials/scroll-reveal.ts`, `scroll-reveal-page.tsx`, `lib/materials/scroll-reveal.ts`           |
-| Documentation and updates            | `app/docs/page.tsx`, `lib/materials/site-information.ts`                                                      |
-| Local contribution workspace         | `app/contribute/page.tsx`, `components/materials/contribution-workspace.tsx`, `lib/materials/contribution.ts` |
-| Statistics and exact record previews | `components/materials/data-sections.tsx`                                                                      |
-| API schemas and adapter              | `lib/materials/api.ts`, `.env.example`                                                                        |
-| URL query normalization              | `lib/materials/search.ts`                                                                                     |
-| About and citation availability      | `app/about/page.tsx`                                                                                          |
-| Contract, draft and motion checks    | `tests/materials.test.ts`, `tests/contribution.test.ts`, `tests/scroll-reveal.test.ts`                        |
+| Surface                              | Files                                                                                                                                                                        |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Homepage                             | `app/page.tsx`, `components/materials/homepage.tsx`, `pressure-hero.tsx`, `community-map.tsx`                                                                                |
+| Application shell and navigation     | `app/layout.tsx`, `components/materials/app-shell.tsx`                                                                                                                       |
+| Tokens, theme, responsive styles     | `app/globals.css`                                                                                                                                                            |
+| Shared UI foundations                | `components/materials/foundations.tsx`                                                                                                                                       |
+| Search entry and discovery preview   | `app/explore/page.tsx`, `components/materials/search-input.tsx`, `components/materials/search-workspace.tsx`                                                                 |
+| Interactive periodic table           | `components/materials/periodic-table.tsx`, `lib/materials/elements.ts`                                                                                                       |
+| Element reference information        | `components/materials/element-information.tsx`, `lib/materials/element-reference.ts`                                                                                         |
+| Scroll section transitions           | `components/materials/scroll-reveal.ts`, `scroll-reveal-page.tsx`, `lib/materials/scroll-reveal.ts`                                                                          |
+| Documentation and updates            | `app/docs/page.tsx`, `lib/materials/site-information.ts`                                                                                                                     |
+| Batch contribution workspace         | `app/contribute/page.tsx`, `components/materials/batch-contribution-workspace.tsx`, `contribution-record-editor.tsx`, `lib/materials/batch-contribution.ts`, `zip-import.ts` |
+| Personal contribution workspace      | `app/workspace/page.tsx`, `components/materials/my-contributions.tsx`, `lib/materials/local-batches.ts`, `contribution-contract.ts`                                          |
+| Statistics and exact record previews | `components/materials/data-sections.tsx`                                                                                                                                     |
+| API schemas and adapter              | `lib/materials/api.ts`, `.env.example`                                                                                                                                       |
+| URL query normalization              | `lib/materials/search.ts`                                                                                                                                                    |
+| About and citation availability      | `app/about/page.tsx`                                                                                                                                                         |
+| Contract, draft and motion checks    | `tests/materials.test.ts`, `tests/contribution.test.ts`, `tests/scroll-reveal.test.ts`                                                                                       |
 
 ## Available now
 
@@ -53,9 +54,9 @@ React 19.2, TypeScript 5.9, Vinext 1.0.0-beta.5 / Vite 8, Tailwind 4. Existing s
 - Four distinct statistics with documented counting meanings, loading states, unavailable values, and error recovery.
 - API-backed record previews when configured; unsupported or missing data never generates fabricated records.
 - Honest Upcoming states for scientific tools; search filters are available as frontend controls with a reserved API contract. There are no fake charts, crystal structures, detail links, or stability labels.
-- A scroll-driven diamond-anvil introduction and staggered section fades across all five pages, with a full viewport reading area, five editable placeholder names, email contact entries and a map prepared for verified community statistics.
+- A scroll-driven diamond-anvil introduction and staggered section fades across the application, with a full viewport reading area, five editable placeholder names, email contact entries and a map prepared for verified community statistics.
 - Independent documentation and updates page; unconfirmed methods, materials sources and citations are marked To be published. Interface history is separate from scientific data releases.
-- Local contribution drafts: basic CIF/POSCAR checks, scientific context, provenance and contributor information, exported as JSON. No submission backend or automatic email sending.
+- Batch contribution drafts for structures, Raman/XRD curves, physical properties and original attachments; multiple files/ZIP and explicit CSV mappings. Private by default, with separate processing consent. Save/reopen local batches, export/import original bytes, and inspect their preparation status in `/workspace`. No actual submission, review or VASP execution.
 
 ## Data connection
 
@@ -67,7 +68,7 @@ See [API contract](docs/API_CONTRACT.md). The documented endpoints are a propose
 
 ## Scientific boundary and future work
 
-Phase 1 does not implement material details, scientific charts, diffraction calculations, phase diagrams, database-record exports, or a Pressure Explorer. None of these exist behind a misleading active link. Local contribution-draft export is available separately.
+Phase 1 does not implement material details, linked scientific analysis charts, diffraction calculations, phase diagrams, database-record exports, or a Pressure Explorer. Contribution-file previews use only uploaded numerical values for preparation checks. None of these exist behind a misleading active link. Local contribution-draft export is available separately.
 
 See [Phase 2 architecture notes](docs/PHASE_2.md). Future pressure state belongs to a single material's exploration context, not the application shell. Exact records and available pressures must remain explicit.
 
@@ -136,3 +137,15 @@ Fully visible headings, cards and bottom actions stay clear across one viewport 
 Hover inspection now works with zero selected elements, without changing the query. The existing 350 ms dwell and Pin info retain the intended reference while the pointer crosses other elements. The compact reference background has a fixed 114 px desktop height and 184 px mobile height; property columns extend farther right to balance the identity column. Long names, oxidation lists and predicted configurations keep their original values and qualifiers.
 
 Modified surfaces: shared reveal hook, page wrapper and geometry helper; homepage-compatible styles; discovery and reference cards; documentation, contribution and about routes; platform history; viewport geometry tests and project documentation. No dependencies, API contracts, contribution logic or scientific data changed. Current verification and screenshots are in `docs/VALIDATION.md`.
+
+## Batch contributions and personal workspace — 2026-10-11 (v7)
+
+Before editing, the exact v6 source was backed up and hash-verified at `../versions/20261011-150021-viewport-reading-v6/`. This revision adds experimental/theoretical batches, native multiple-file/ZIP import, CSV record mappings, column-specific curve previews, original binary attachments and v2 JSON export/import. Original files are stored once even when several curves reference them. No dependency was added.
+
+Saved drafts persist in this browser through IndexedDB. `/workspace` groups actual saved batches and provides record context, independent review/publication/computation/quality/ingestion placeholders, reopening, export and local removal. Account and server integration remain pending; no authentication, fake approval, calculation job or progress percentage is presented.
+
+Default visibility is private; users can request public display after approval and separately authorize eligible structures for VASP processing. Private outputs remain private. Future approved public theoretical contributions retain a red-star source/status label until platform standardization, while original and standardized records stay separate. The user's existing VASP scripts will connect through a server adapter whose real step plan and events drive the workspace.
+
+Main changes: `components/materials/batch-contribution-workspace.tsx`, `contribution-record-editor.tsx`, `my-contributions.tsx`; `app/workspace/page.tsx`; `lib/materials/batch-contribution.ts`, `zip-import.ts`, `local-batches.ts`, `contribution-contract.ts`; shell navigation, documentation and scoped styles. Existing contribution entry points remain compatible, and the v1 exporter/preflight module remains for migration and format checks. Search, periodic-table behavior, scientific detail pages and pressure state were not changed.
+
+See [batch and interface design](docs/CONTRIBUTIONS.md), [API contract](docs/API_CONTRACT.md), and [validation](docs/VALIDATION.md).
