@@ -9,10 +9,10 @@ const countMetric = z.object({
   count: z.number().finite().int().nonnegative().nullable(),
   definition: z.string().min(1).max(500),
 });
-export const statisticsSchema = z.object({
-  community: z
+const communitySchema = z
     .object({
       registeredUsers: countMetric,
+      mode: z.enum(["live", "demo"]).optional(),
       definition: z.string().min(1).max(500),
       regions: z
         .array(
@@ -35,7 +35,10 @@ export const statisticsSchema = z.object({
           community.registeredUsers.count,
       "Regional counts cannot exceed the registered-user total.",
     )
-    .optional(),
+    .optional();
+export const statisticsSchema = z.object({
+  community: communitySchema,
+  communityDemo: communitySchema,
   materials: countMetric,
   phases: countMetric,
   structureRecords: countMetric,
@@ -61,17 +64,30 @@ export const materialSchema = z.object({
   crystalSystem: z.string().max(100).nullable(),
   pressureGPa: z.number().finite().nullable(),
   createdAt: z.string().datetime({ offset: true }).nullable().optional(),
+  phaseLabel: z.string().max(200).nullable().optional(),
+  externalIds: z.array(z.string()).optional(),
+  provenance: z.enum(["imported", "contributed"]).optional(),
+  dataType: z.string().optional(),
+  origin: z.string().nullable().optional(),
 });
 export const materialsSchema = z
   .object({
     items: z.array(materialSchema),
     total: z.number().int().nonnegative(),
     order: z.enum(["unspecified", "created_desc"]),
+    offset: z.number().int().nonnegative().optional(),
+    limit: z.number().int().positive().optional(),
   })
   .refine(
     (result) => result.total >= result.items.length,
     "Total cannot be smaller than the returned record count.",
   );
+export const phaseGroupsSchema = z.object({
+  groups: z.array(z.object({ key: z.string(), formula: z.string(), phaseId: z.string().nullable(), phaseLabel: z.string().nullable(), count: z.number().int().positive(), reportedPressureCount: z.number().int().nonnegative(), minGPa: z.number().nullable(), maxGPa: z.number().nullable(), spaceGroups: z.array(z.string()), crystalSystems: z.array(z.string()) })),
+  total: z.number().int().nonnegative(), groupsTotal: z.number().int().nonnegative(), offset: z.number().int().nonnegative(), limit: z.number().int().positive(), grouping: z.literal("phase"), definition: z.string(),
+});
+export type PhaseGroup = z.infer<typeof phaseGroupsSchema>["groups"][number];
+export type PhaseGroupsResponse = z.infer<typeof phaseGroupsSchema>;
 export type DatabaseStatistics = z.infer<typeof statisticsSchema>;
 export type MaterialRecord = z.infer<typeof materialSchema>;
 export type MaterialsResponse = z.infer<typeof materialsSchema>;
@@ -149,21 +165,32 @@ export function createMaterialsClient(
     configured: Boolean(base),
     statistics: (signal?: AbortSignal) =>
       request("/statistics", statisticsSchema, signal),
+    previews: (signal?: AbortSignal) => request(process.env.NEXT_PUBLIC_MATERIALS_PREVIEW_PATH || "/materials?limit=6", materialsSchema, signal),
+    phaseGroups: ({ query = "", mode = "any", filters = {}, limit = 20, offset = 0, signal }: { query?: string; mode?: SearchMode; filters?: SearchFilters; limit?: number; offset?: number; signal?: AbortSignal }) => {
+      const params = buildSearchParams(query, mode, filters); params.set("groupBy", "phase"); params.set("limit", String(limit)); params.set("offset", String(offset));
+      return request(`/materials?${params}`, phaseGroupsSchema, signal);
+    },
     materials: ({
       query,
       mode = "any",
       limit = 6,
+      offset = 0,
       filters = {},
       signal,
+      groupKey,
     }: {
       query?: string;
       mode?: SearchMode;
       limit?: number;
+      offset?: number;
       filters?: SearchFilters;
       signal?: AbortSignal;
+      groupKey?: string;
     } = {}) => {
       const params = buildSearchParams(query ?? "", mode, filters);
       params.set("limit", String(limit));
+      if (offset) params.set("offset", String(offset));
+      if (groupKey) params.set("groupKey", groupKey);
       return request(`/materials?${params}`, materialsSchema, signal);
     },
   };

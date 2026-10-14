@@ -37,7 +37,7 @@ export function LoginPage() {
     [error, setError] = useState(""),
     [now, setNow] = useState(Date.now());
   useEffect(() => {
-    if (auth.user) router.replace(returnTo);
+    if (auth.user) router.replace(auth.user.passwordChangeRequired ? "/account?tab=settings&returnTo=" + encodeURIComponent(returnTo) : returnTo);
   }, [auth.user, returnTo, router]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);

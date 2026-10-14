@@ -12,7 +12,10 @@ export const careerStages = {
   other: "Other",
 } as const;
 const text = z.string().trim().max(200);
-export const profileSchema = z.object({
+export const emailSchema = z.string().trim().toLowerCase().max(254).email("Enter a valid email address.");
+// Existing identities can be read without inventing missing research information.
+// Registration and every profile write use the stricter shared schema below.
+export const storedProfileSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name.").max(100),
   contactEmail: z
     .string()
@@ -46,7 +49,14 @@ export const profileSchema = z.object({
   countryRegion: z.string().trim().max(100),
   publicProfile: z.boolean(),
 });
-export type Profile = z.infer<typeof profileSchema>;
+export const profileSchema = storedProfileSchema.extend({
+  contactEmail: emailSchema,
+  institution: text.min(1, "Enter your institution."),
+  researchGroup: text.min(1, "Enter your research group."),
+  careerStage: storedProfileSchema.shape.careerStage.refine(value => value !== "", "Choose your career stage."),
+  countryRegion: z.string().trim().min(1, "Enter your country / region.").max(100),
+});
+export type Profile = z.infer<typeof storedProfileSchema>;
 export const roleSchema = z.enum(["member", "admin"]);
 export type Role = z.infer<typeof roleSchema>;
 export const userSchema = z.object({
@@ -56,8 +66,13 @@ export const userSchema = z.object({
   username: z.string().min(3).max(32).optional(),
   emailVerified: z.boolean(),
   role: roleSchema,
-  profile: profileSchema,
+  profile: storedProfileSchema,
   version: z.string().min(1),
+  passwordChangeRequired: z.boolean().optional(),
+  status: z.enum(["active", "suspended", "deleted"]).optional(),
+  statusReason: z.string().optional(),
+  demoAccount: z.boolean().optional(),
+  createdAt: z.string().datetime().optional(),
 });
 export type AccountUser = z.infer<typeof userSchema>;
 export const usernameSchema = z
@@ -75,40 +90,19 @@ export const passwordSchema = z
   .min(10, "Use at least 10 characters for your password.")
   .max(128, "Use no more than 128 characters for your password.");
 export const registrationProfileSchema = profileSchema.extend({
-  institution: z.string().trim().min(1, "Enter your institution.").max(200),
-  researchGroup: z
-    .string()
-    .trim()
-    .min(1, "Enter your research group.")
-    .max(200),
-  careerStage: z.enum(
-    [
-      "undergraduate",
-      "masters",
-      "doctoral",
-      "postdoc",
-      "faculty",
-      "researcher",
-      "industry",
-      "other",
-    ],
-    { errorMap: () => ({ message: "Choose your career stage." }) },
-  ),
+  // The registration email is authoritative and copied to the research profile.
+  contactEmail: storedProfileSchema.shape.contactEmail,
   publicProfile: z.literal(false),
-});
+}).strict();
 export const registrationSchema = z
   .object({
     username: usernameSchema,
     password: passwordSchema,
-    email: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .max(254)
-      .email("Enter a valid email address."),
+    email: emailSchema,
     profile: registrationProfileSchema,
   })
-  .strict();
+  .strict()
+  .transform(value => ({ ...value, profile: { ...value.profile, contactEmail: value.email } }));
 export type Registration = z.infer<typeof registrationSchema>;
 export const loginMethods = [
   "password",
@@ -142,6 +136,12 @@ export const auditSchema = z.object({
   at: z.string().datetime(),
 });
 export type RoleAudit = z.infer<typeof auditSchema>;
+export const accountAuditSchema = z.object({
+  id: z.string(), actorId: z.string(), targetId: z.string(),
+  action: z.enum(["profile-updated", "password-reset", "password-changed", "account-suspended", "account-reactivated", "account-deleted", "account-restored", "sessions-revoked"]),
+  reason: z.string(), at: z.string().datetime(),
+});
+export type AccountAudit = z.infer<typeof accountAuditSchema>;
 
 export function emptyProfile(displayName: string, contactEmail = ""): Profile {
   return {
@@ -152,7 +152,7 @@ export function emptyProfile(displayName: string, contactEmail = ""): Profile {
     researchGroup: "",
     careerStage: "",
     orcid: "",
-    countryRegion: "",
+    countryRegion: "China",
     publicProfile: false,
   };
 }
@@ -202,6 +202,9 @@ export function canChangeRole(
   next: Role,
   users: AccountUser[],
 ) {
+  if (actor.status && actor.status !== "active") throw new Error("Active administrator access is required.");
+  if (target.demoAccount) throw new Error("Demo identities cannot be granted administrative access.");
+  if (target.status && target.status !== "active") throw new Error("Reactivate this account before changing its role.");
   if (actor.role !== "admin")
     throw new Error("Administrator access is required.");
   if (target.role === next)
@@ -211,7 +214,7 @@ export function canChangeRole(
   if (
     target.role === "admin" &&
     next === "member" &&
-    users.filter((u) => u.role === "admin").length <= 1
+    users.filter((u) => u.role === "admin" && (!u.status || u.status === "active") && !u.demoAccount).length <= 1
   )
     throw new Error("The last administrator cannot be removed.");
 }

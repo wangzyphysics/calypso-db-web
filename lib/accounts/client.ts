@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { adminStatisticsSchema } from "./statistics.ts";
 import {
   auditSchema,
+  accountAuditSchema,
+  passwordSchema,
   profileSchema,
   registrationSchema,
   providersSchema,
@@ -54,7 +57,9 @@ export function createIdentityClient(
     if (!response.ok)
       throw new IdentityError(
         response.status === 401
-          ? "Your session has expired. Sign in again."
+          ? path === "/password/sign-in"
+            ? "The account or password is incorrect."
+            : "Your session has expired. Sign in again."
           : response.status === 403
             ? "This action is not permitted."
             : response.status === 409
@@ -70,6 +75,9 @@ export function createIdentityClient(
     configured: Boolean(prefix),
     session: () => request("/session", sessionSchema),
     providers: () => request("/providers", providersSchema),
+    registrationOptions: () => request("/registration-options", z.object({ passwordRegistration: z.boolean(), emailVerification: z.boolean(), mode: z.string() })),
+    registerWithPassword: (input: Registration, csrf: string) =>
+      request("/registrations/password", sessionSchema.extend({ user: userSchema }), "POST", registrationSchema.parse(input), csrf),
     signOut: (csrf: string) =>
       request("/logout", z.object({ ok: z.literal(true) }), "POST", {}, csrf),
     saveProfile: (profile: Profile, version: string, csrf: string) =>
@@ -80,6 +88,8 @@ export function createIdentityClient(
         { profile: profileSchema.parse(profile), expectedVersion: version },
         csrf,
       ),
+    changePassword: (currentPassword: string, newPassword: string, csrf: string) =>
+      request("/password/change", sessionSchema.extend({ user: userSchema }), "POST", { currentPassword, newPassword: passwordSchema.parse(newPassword) }, csrf),
     challenge: (
       channel: "email" | "sms",
       destination: string,
@@ -174,11 +184,18 @@ export function createIdentityClient(
       "/start?returnTo=" +
       encodeURIComponent(safeReturnTo(returnTo)) +
       (purpose === "sign-up" ? "&intent=sign-up" : ""),
+    statistics: (view: "live" | "demo" = "live") => request("/admin/statistics?view=" + view, adminStatisticsSchema),
     users: () =>
       request(
         "/admin/users",
-        z.object({ items: z.array(userSchema), audit: z.array(auditSchema) }),
+        z.object({ items: z.array(userSchema), audit: z.array(auditSchema), accountAudit: z.array(accountAuditSchema).optional() }),
       ),
+    adminAccountStatus: (id: string, status: "active" | "suspended" | "deleted", reason: string, version: string, csrf: string) => request("/admin/users/" + encodeURIComponent(id) + "/status", userSchema, "PATCH", { status, reason, expectedVersion: version }, csrf),
+    adminRevokeSessions: (id: string, reason: string, version: string, csrf: string) => request("/admin/users/" + encodeURIComponent(id) + "/sessions", userSchema, "PATCH", { reason, expectedVersion: version }, csrf),
+    adminSaveProfile: (id: string, profile: Profile, reason: string, version: string, csrf: string) =>
+      request("/admin/users/" + encodeURIComponent(id) + "/profile", userSchema, "PATCH", { profile: profileSchema.parse(profile), reason, expectedVersion: version }, csrf),
+    adminResetPassword: (id: string, reason: string, version: string, csrf: string) =>
+      request("/admin/users/" + encodeURIComponent(id) + "/password-reset", z.object({ user: userSchema, temporaryPassword: passwordSchema }), "POST", { reason, expectedVersion: version }, csrf),
     changeRole: (
       id: string,
       role: Role,

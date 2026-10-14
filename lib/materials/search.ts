@@ -27,7 +27,19 @@ export type FilterDraft = {
   spaceGroup: string;
   elementsMin: string;
   elementsMax: string;
+  provenance: string;
+  origin: string;
+  dataType: string;
+  pressureAvailability: string;
+  sort: string;
 };
+export const resultFilterOptions = {
+  provenance: { imported: "Imported dataset", contributed: "Reviewed contributions" },
+  origin: { theoretical: "Theoretical", experimental: "Experimental", unreported: "Origin not supplied" },
+  dataType: { structure: "Crystal structures", raman: "Raman spectra", xrd: "X-ray diffraction", property: "Physical properties", attachment: "Supporting files" },
+  pressureAvailability: { reported: "Pressure reported", missing: "Pressure not supplied" },
+  sort: { created_desc: "Added to database", formula_asc: "Formula A–Z", pressure_asc: "Pressure: low to high", pressure_desc: "Pressure: high to low", space_group_asc: "Space group" },
+} as const;
 export type SearchFilters = {
   excludeElements?: string;
   pressureMin?: number;
@@ -36,6 +48,11 @@ export type SearchFilters = {
   spaceGroup?: string;
   elementsMin?: number;
   elementsMax?: number;
+  provenance?: string;
+  origin?: string;
+  dataType?: string;
+  pressureAvailability?: string;
+  sort?: string;
 };
 export const emptyFilters: FilterDraft = {
   excludeElements: "",
@@ -45,6 +62,11 @@ export const emptyFilters: FilterDraft = {
   spaceGroup: "",
   elementsMin: "",
   elementsMax: "",
+  provenance: "",
+  origin: "",
+  dataType: "",
+  pressureAvailability: "",
+  sort: "",
 };
 export function isSearchMode(value: string | null): value is SearchMode {
   return searchModes.some((mode) => mode === value);
@@ -139,6 +161,13 @@ export function elementsFromQuery(query: string, mode: SearchMode): string[] {
 }
 export function normalizeFilters(draft: FilterDraft): SearchFilters {
   const result: SearchFilters = {};
+  for (const key of Object.keys(resultFilterOptions) as (keyof typeof resultFilterOptions)[]) {
+    const value = draft[key];
+    if (value) {
+      if (!Object.hasOwn(resultFilterOptions[key], value)) throw new Error("Choose a supported result filter.");
+      result[key] = value;
+    }
+  }
   if (draft.excludeElements.trim())
     result.excludeElements = parseElements(draft.excludeElements).join(",");
   if (draft.crystalSystem) {
@@ -246,7 +275,6 @@ export function searchHref(
 ): string {
   validateSelection(query, mode, filters);
   const params = buildSearchParams(query, mode, filters);
-  if (!params.size)
-    throw new Error("Enter a query, select an element, or choose a filter.");
+  if (!params.size) return "/explore#results";
   return `/explore?${params.toString()}#results`;
 }

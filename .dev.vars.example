@@ -1,0 +1,7 @@
+# Server-only Worker binding. Never put PostgreSQL credentials in this file.
+# Local setup: copy to .dev.vars and use the loopback API below.
+CALYPSO_LOCAL_BACKEND_URL=http://127.0.0.1:8877
+# Server-only selection. A deployed Worker cannot reach your computer's loopback.
+CALYPSO_BACKEND_MODE=local
+# For remote preview, select remote and configure the server's HTTPS API origin.
+# CALYPSO_REMOTE_BACKEND_URL=https://your-api.example.com

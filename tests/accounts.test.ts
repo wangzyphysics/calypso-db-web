@@ -20,7 +20,7 @@ const member: AccountUser = {
   email: "member@example.org",
   emailVerified: true,
   role: "member",
-  profile: emptyProfile("Member"),
+  profile: { ...emptyProfile("Member", "member@example.org"), institution: "QA Institute", researchGroup: "QA group", careerStage: "doctoral" },
   version: "v1",
 };
 const admin: AccountUser = { ...member, id: "a", role: "admin" };
@@ -78,6 +78,8 @@ test("registration requires account/password and research details, normalizes id
   assert.equal(value.username, "scientist");
   assert.equal(value.email, "scientist@example.test");
   assert.equal(value.profile.displayName, "Scientist");
+  assert.equal(value.profile.contactEmail, value.email);
+  assert.equal(value.profile.countryRegion, "China");
   for (const extra of [
     { role: "admin" },
     { emailVerified: true },
@@ -92,6 +94,7 @@ test("registration requires account/password and research details, normalizes id
     { institution: " " },
     { researchGroup: "" },
     { careerStage: "" },
+    { countryRegion: "" },
     { publicProfile: true },
   ]) {
     assert.equal(
@@ -124,15 +127,15 @@ test("local password checks use independent salts, preserve spaces and reject wr
   assert.equal(JSON.stringify(first).includes(testPassword), false);
   await assert.rejects(hashTestPassword("short"));
 });
-test("profiles remain optional for affiliation and reject invalid names/contact/ORCID", () => {
+test("profile writes use the same required research fields as registration and keep department/ORCID optional", () => {
   assert.equal(
-    profileSchema.parse(emptyProfile("Researcher")).publicProfile,
+    profileSchema.parse(member.profile).publicProfile,
     false,
   );
-  assert.throws(() => profileSchema.parse(emptyProfile(" ")), /display name/);
+  assert.throws(() => profileSchema.parse({ ...member.profile, displayName: " " }), /display name/);
   assert.throws(
     () => profileSchema.parse({ ...member.profile, contactEmail: "invalid" }),
-    /valid contact/,
+    /valid email/,
   );
   assert.throws(
     () => profileSchema.parse({ ...member.profile, orcid: "anything" }),
@@ -146,6 +149,13 @@ test("profiles remain optional for affiliation and reject invalid names/contact/
     }).careerStage,
     "doctoral",
   );
+  for (const key of ["displayName", "contactEmail", "institution", "researchGroup", "careerStage", "countryRegion"]) {
+    assert.equal(profileSchema.safeParse({ ...member.profile, [key]: "" }).success, false);
+  }
+  assert.equal(profileSchema.safeParse({ ...member.profile, department: "", orcid: "" }).success, true);
+  for (const email of ["invalid", "a@", "a@b", "a..b@example.org", "name @example.org"]) {
+    assert.equal(registrationSchema.safeParse({ ...signup(), email }).success, false);
+  }
 });
 test("phone and platform identities do not require invented email addresses", () => {
   const user = userSchema.parse({
@@ -215,7 +225,7 @@ test("identity client permits only same-origin BFF and requires CSRF for mutatio
     );
     const body = JSON.parse(String(init?.body));
     assert.equal(body.expectedVersion, "v1");
-    assert.equal(body.profile.institution, "");
+    assert.equal(body.profile.institution, "QA Institute");
     return new Response(JSON.stringify(member));
   });
   await assert.rejects(
@@ -281,7 +291,8 @@ test("local test accounts are disabled outside opted-in loopback development and
     local.signInTest("test-researcher");
     assert.throws(() => local.listTestUsers(), /Administrator/);
     local.saveTestProfile("test-researcher", {
-      ...emptyProfile("Test scientist"),
+      ...member.profile,
+      displayName: "Test scientist",
       institution: "QA Institute",
     });
     assert.throws(
@@ -329,7 +340,7 @@ test("local test accounts are disabled outside opted-in loopback development and
     assert.equal(created.role, "member");
     assert.equal(created.emailVerified, false);
     assert.equal(created.profile.publicProfile, false);
-    assert.equal(created.profile.contactEmail, "");
+    assert.equal(created.profile.contactEmail, "new@example.test");
     assert.equal(created.profile.institution, "QA Institute");
     assert.equal(created.profile.researchGroup, "QA group");
     assert.equal(created.email, "new@example.test");

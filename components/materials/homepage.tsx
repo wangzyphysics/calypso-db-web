@@ -154,7 +154,7 @@ export function Homepage() {
             </Link>
           </div>
         </section>
-        <CommunityMap community={data?.community} />
+        <CommunityMap community={data?.community} demoCommunity={data?.communityDemo} />
         <section className="team-section content-section" id="team" data-reveal>
           <SectionHeader number="03" title="About Us" />
           <div className="team-names" aria-label="Placeholder team names">

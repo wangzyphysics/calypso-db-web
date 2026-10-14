@@ -16,8 +16,9 @@ import { Container } from "@/components/materials/foundations";
 import { ScrollRevealPage } from "@/components/materials/scroll-reveal-page";
 import { useAuth } from "./auth-context";
 import { AccountNavigation, TestModeNotice } from "./account-navigation";
+import { ResearchProfileFields } from "./profile-fields";
+import { PasswordSettings } from "./password-settings";
 import {
-  careerStages,
   profileSchema,
   type Profile,
 } from "@/lib/accounts/model";
@@ -26,7 +27,7 @@ export function AccountPage() {
     user = auth.user!,
     router = useRouter(),
     params = useSearchParams();
-  const settings = params.get("tab") === "settings";
+  const settings = params.get("tab") === "settings" || Boolean(user.passwordChangeRequired);
   const [profile, setProfile] = useState<Profile>(user.profile),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -141,9 +142,7 @@ export function AccountPage() {
                 </div>
               </dl>
               <p className="account-muted">
-                Contact email in your profile does not change your sign-in
-                identity. Account linking, recovery and session management
-                require the authentication service.
+                Your registration email is copied into this profile. Changing the contact address does not change your sign-in identity or verify the new address. Third-party linking and email recovery are awaiting connection.
               </p>
               <button
                 type="button"
@@ -160,11 +159,12 @@ export function AccountPage() {
                 </p>
               )}
             </section>
+            <PasswordSettings />
             <section className="account-panel">
               <Building2 size={24} />
               <h2>Privacy & attribution</h2>
               <p>
-                Your affiliation and career stage are optional. A batch uses a
+                Name, email, institution, research group, career stage and country are required, just as in registration. Department and ORCID are optional. A batch uses a
                 snapshot of the information you explicitly apply; later profile
                 edits do not change past attribution.
               </p>
@@ -219,93 +219,9 @@ export function AccountPage() {
                 <span>{dirty ? "Unsaved changes" : "Up to date"}</span>
               </div>
               <fieldset disabled={busy}>
-                <div className="account-field-grid">
-                  <label>
-                    Display name
-                    <input
-                      value={profile.displayName}
-                      onChange={(e) => change({ displayName: e.target.value })}
-                      required
-                      maxLength={100}
-                      autoComplete="name"
-                    />
-                  </label>
-                  <label>
-                    Contact email <span>Optional</span>
-                    <input
-                      value={profile.contactEmail}
-                      onChange={(e) => change({ contactEmail: e.target.value })}
-                      type="email"
-                      maxLength={254}
-                      autoComplete="email"
-                    />
-                  </label>
-                  <label>
-                    Institution <span>Optional</span>
-                    <input
-                      value={profile.institution}
-                      onChange={(e) => change({ institution: e.target.value })}
-                      maxLength={200}
-                      autoComplete="organization"
-                      placeholder="University, institute or organization"
-                    />
-                  </label>
-                  <label>
-                    Department <span>Optional</span>
-                    <input
-                      value={profile.department}
-                      onChange={(e) => change({ department: e.target.value })}
-                      maxLength={200}
-                    />
-                  </label>
-                  <label>
-                    Research group <span>Optional</span>
-                    <input
-                      value={profile.researchGroup}
-                      onChange={(e) =>
-                        change({ researchGroup: e.target.value })
-                      }
-                      maxLength={200}
-                      placeholder="Group or laboratory name"
-                    />
-                  </label>
-                  <label>
-                    Career stage <span>Optional</span>
-                    <select
-                      value={profile.careerStage}
-                      onChange={(e) =>
-                        change({
-                          careerStage: e.target.value as Profile["careerStage"],
-                        })
-                      }
-                    >
-                      {Object.entries(careerStages).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    ORCID iD <span>Optional</span>
-                    <input
-                      value={profile.orcid}
-                      onChange={(e) => change({ orcid: e.target.value })}
-                      maxLength={19}
-                      placeholder="0000-0000-0000-000X"
-                    />
-                  </label>
-                  <label>
-                    Country / region <span>Optional</span>
-                    <input
-                      value={profile.countryRegion}
-                      onChange={(e) =>
-                        change({ countryRegion: e.target.value })
-                      }
-                      maxLength={100}
-                    />
-                  </label>
-                </div>
+                <p className="account-muted">Required fields match registration. Department and ORCID are optional.</p>
+                <ResearchProfileFields profile={profile} onChange={change} />
+                <p className="account-muted">Your profile email is used for contact and attribution. Editing it does not change your sign-in email or verify the new address.</p>
                 <label className="account-checkbox">
                   <input
                     type="checkbox"

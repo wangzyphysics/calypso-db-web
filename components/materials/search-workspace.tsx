@@ -1,6 +1,6 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   SlidersHorizontal,
   RotateCcw,
@@ -11,7 +11,9 @@ import { Container, EmptyState } from "./foundations";
 import { ScrollRevealPage } from "./scroll-reveal-page";
 import { SearchInput } from "./search-input";
 import { PeriodicTable } from "./periodic-table";
-import { MaterialsSection } from "./data-sections";
+import { SearchResults } from "./search-results";
+import { resultPreferences, preferenceParams, type ResultPreferences } from "@/lib/materials/result-layout";
+import { resultFilterOptions } from "@/lib/materials/search";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,8 +37,9 @@ export function SearchWorkspace() {
   const params = useSearchParams();
   const router = useRouter();
   const routeKey = params.toString();
+  const criteriaKey = useMemo(() => { const route = new URLSearchParams(routeKey); for (const key of ["page", "pageSize", "view", "grouping"]) route.delete(key); return route.toString(); }, [routeKey]);
   const applied = useMemo(() => {
-    const route = new URLSearchParams(routeKey);
+    const route = new URLSearchParams(criteriaKey);
     const type = route.get("type");
     const mode: SearchMode = isSearchMode(type) ? type : "any";
     const rawQuery = route.get("query") ?? "";
@@ -63,13 +66,33 @@ export function SearchWorkspace() {
       filters,
       error,
     };
-  }, [routeKey]);
+  }, [criteriaKey]);
+  const preferences = resultPreferences(params);
+  function commitResultPreferences(next: ResultPreferences, nextFilters = applied.filters) {
+    const url = new URL(searchHref(applied.query, applied.mode, nextFilters), "http://local.invalid");
+    for (const [key, value] of preferenceParams(next)) url.searchParams.set(key, value);
+    router.push(url.pathname + url.search + "#results");
+  }
   const [query, setQuery] = useState(applied.displayQuery);
   const [mode, setMode] = useState<SearchMode>(applied.mode);
   const [filters, setFilters] = useState<FilterDraft>(applied.draft);
   const [error, setError] = useState("");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [searchRevision, setSearchRevision] = useState(0);
+  const lastFormCriteria = useRef("");
+  const discoveryGrid = useRef<HTMLDivElement>(null);
+  const elementRegion = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    setFiltersOpen(window.matchMedia("(min-width: 768px)").matches);
+    const grid = discoveryGrid.current, elements = elementRegion.current;
+    if (!grid || !elements) return;
+    const observer = new ResizeObserver(() => grid.style.setProperty("--filter-panel-limit", `${elements.getBoundingClientRect().height}px`));
+    observer.observe(elements); return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const formKey = JSON.stringify([applied.mode, applied.displayQuery, Object.entries(applied.draft).filter(([key]) => key !== "sort")]);
+    if (lastFormCriteria.current === formKey) { setFilters(current => current.sort === applied.draft.sort ? current : { ...current, sort: applied.draft.sort }); return; }
+    lastFormCriteria.current = formKey;
     setQuery(applied.displayQuery);
     setMode(applied.mode);
     setFilters(applied.draft);
@@ -103,8 +126,8 @@ export function SearchWorkspace() {
       setMode(mode === "system" ? "system" : "elements");
     }
   };
-  const currentFilterCount = Object.values(filters).filter(
-    (value) => value !== "",
+  const currentFilterCount = Object.entries(filters).filter(
+    ([key, value]) => key !== "sort" && value !== "",
   ).length;
   const draftChanged =
     query !== applied.displayQuery ||
@@ -119,7 +142,10 @@ export function SearchWorkspace() {
           onSubmit={(event) => {
             event.preventDefault();
             try {
-              router.push(searchHref(query, mode, normalizeFilters(filters)));
+              const url = new URL(searchHref(query, mode, normalizeFilters(filters)), "http://local.invalid");
+              for (const [key, value] of preferenceParams({ ...preferences, page: 1 })) url.searchParams.set(key, value);
+              router.push(url.pathname + url.search + "#results");
+              setSearchRevision(revision => revision + 1);
               setError("");
             } catch (reason) {
               setError(
@@ -146,16 +172,16 @@ export function SearchWorkspace() {
               error={error}
             />
           </header>
-          <div className="discovery-grid">
+          <div ref={discoveryGrid} className={`discovery-grid${filtersOpen ? "" : " filters-collapsed"}`}>
             <aside
               className={`filter-panel${filtersOpen ? " expanded" : ""}`}
               aria-labelledby="filters-heading"
               data-reveal
             >
               <div className="filter-heading">
-                <h2 id="filters-heading">
-                  <SlidersHorizontal size={17} /> Refine your search
-                </h2>
+                <h2 id="filters-heading"><button type="button" className="filter-toggle" aria-expanded={filtersOpen} aria-controls="filter-fields" onClick={() => setFiltersOpen(!filtersOpen)}>
+                  <SlidersHorizontal size={17} /> <span>Refine your search{currentFilterCount > 0 && <small>{currentFilterCount}</small>}</span><ChevronDown size={14} aria-hidden="true" />
+                </button></h2>
                 <Button
                   type="button"
                   variant="ghost"
@@ -163,26 +189,14 @@ export function SearchWorkspace() {
                   aria-label="Reset filters"
                   disabled={!currentFilterCount}
                   onClick={() => {
-                    setFilters({ ...emptyFilters });
+                    setFilters({ ...emptyFilters, sort: filters.sort });
                     setError("");
                   }}
                 >
                   <RotateCcw size={15} />
                 </Button>
               </div>
-              <button
-                type="button"
-                className="filter-disclosure"
-                aria-expanded={filtersOpen}
-                aria-controls="filter-fields"
-                onClick={() => setFiltersOpen(!filtersOpen)}
-              >
-                {filtersOpen
-                  ? "Hide filters"
-                  : `Show filters${currentFilterCount ? ` (${currentFilterCount})` : ""}`}
-                <ChevronDown size={14} />
-              </button>
-              <div className="filter-fields" id="filter-fields">
+              <div className="filter-fields" id="filter-fields" hidden={!filtersOpen}>
                 <fieldset className="composition-filter">
                   <legend>Composition</legend>
                   <label htmlFor="exclude-elements">Exclude elements</label>
@@ -281,9 +295,14 @@ export function SearchWorkspace() {
                     </p>
                   </div>
                 </fieldset>
+                <fieldset className="record-source-filter"><legend className="sr-only">Record context</legend><details className="record-context-disclosure" open={Boolean(filters.provenance || filters.origin || filters.dataType || filters.pressureAvailability)}><summary>Source, type & completeness <ChevronDown size={13} /></summary>
+                  {(["provenance", "origin", "dataType", "pressureAvailability"] as const).map(field => <label key={field}>{({ provenance: "Record source", origin: "Data origin", dataType: "Data type", pressureAvailability: "Pressure availability" })[field]}
+                    <select aria-label={`Search ${field}`} value={filters[field]} onChange={event => updateFilter(field, event.target.value)}><option value="">All</option>{Object.entries(resultFilterOptions[field]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+                  </label>)}
+                </details></fieldset>
               </div>
             </aside>
-            <div className="discovery-elements" data-reveal>
+            <div ref={elementRegion} className="discovery-elements" data-reveal>
               <PeriodicTable
                 selected={selected}
                 excluded={excluded}
@@ -315,11 +334,14 @@ export function SearchWorkspace() {
             description={applied.error}
           />
         ) : (
-          <MaterialsSection
+          <SearchResults
+            key={searchRevision}
             query={applied.query}
             mode={applied.mode}
             filters={applied.filters}
-            search
+            preferences={preferences}
+            onPreferencesChange={next => commitResultPreferences(next)}
+            onFiltersChange={next => commitResultPreferences({ ...preferences, page: 1 }, next)}
           />
         )}
       </Container>

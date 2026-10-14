@@ -2,7 +2,17 @@
 
 An independent frontend for a pressure-oriented materials research platform. The original CALYPSO website was a reference only. This application does not use its routes, API, authentication, data, or scientific modules.
 
-The workspace was initially empty. Following the confirmed scope, this project establishes a new homepage, navigation, discovery entry points, and shared design system. There is no connected dataset and no mock backend.
+The workspace was initially empty. Following the confirmed scope, this project establishes a new homepage, navigation, discovery entry points, and shared design system. The local website now connects to the adjacent materials-backend-lab PostgreSQL database. No mock scientific backend is used.
+
+## Registration and administration — 2026-10-12
+
+Registration and Research Profile now share required research fields, inline email validation and a China registration default. Email verification is visibly reserved and unverified until its service is connected. Empty searches return ten records per page. Administrators can find users, correct profiles and generate temporary passwords that require replacement before access. See [account rules and administrator instructions](docs/ACCOUNT_MANAGEMENT.md).
+
+## Local database connection — 2026-10-12
+
+Run `npm run dev:local` to start/reuse PostgreSQL, the platform API and the website. Password registration, research profiles, real materials search and contribution submission/review now persist in PostgreSQL. Test users are `local.researcher` and `local.admin`; their random passwords are in the backend’s private `.local/platform-test-accounts.json`. See [local setup, scope and limits](docs/LOCAL_DATABASE.md).
+
+Earlier browser-only sections below describe previous interface revisions; the database configuration takes precedence. OAuth, email/SMS verification and VASP execution remain pending.
 
 ## Run locally
 
@@ -56,13 +66,13 @@ React 19.2, TypeScript 5.9, Vinext 1.0.0-beta.5 / Vite 8, Tailwind 4. Existing s
 - Honest Upcoming states for scientific tools; search filters are available as frontend controls with a reserved API contract. There are no fake charts, crystal structures, detail links, or stability labels.
 - A scroll-driven diamond-anvil introduction and staggered section fades across the application, with a full viewport reading area, five editable placeholder names, email contact entries and a map prepared for verified community statistics.
 - Independent documentation and updates page; unconfirmed methods, materials sources and citations are marked To be published. Interface history is separate from scientific data releases.
-- Batch contribution drafts for structures, Raman/XRD curves, physical properties and original attachments; multiple files/ZIP and explicit CSV mappings. Private by default, with separate processing consent. Save/reopen local batches, export/import original bytes, and inspect their preparation status in `/workspace`. No actual submission, review or VASP execution.
+- Batch contribution drafts for structures, Raman/XRD curves, physical properties and original attachments; multiple files/ZIP and explicit CSV mappings. Private by default, with separate processing consent. Save/reopen local batches, export/import original bytes, and inspect their preparation status in `/workspace`. Database mode supports real submission and review; VASP execution remains unconnected.
 
 ## Data connection
 
 Leave `NEXT_PUBLIC_MATERIALS_API_BASE` unset until the independent backend is available. The application then makes no materials API requests and displays connection-pending states. Query entry remains functional and its pending state is explicit.
 
-Copy `.env.example` to `.env.local`, configure the API base, and restart the development server. Public environment variables must never contain secrets. Browser requests use same-origin credentials only. An external service must explicitly support the application's origin through CORS. Authentication is not implemented in Phase 1.
+Copy `.env.example` to `.env.local`, configure the API base, and restart the development server. Public environment variables must never contain secrets. Browser requests use same-origin credentials only. An external service must explicitly support the application's origin through CORS. Local password authentication is implemented; see docs/LOCAL_DATABASE.md for the active configuration.
 
 See [API contract](docs/API_CONTRACT.md). The documented endpoints are a proposed integration boundary, not claims about an existing backend.
 
@@ -155,3 +165,5 @@ See [batch and interface design](docs/CONTRIBUTIONS.md), [API contract](docs/API
 Public home/about/docs; sign-in required for exploration and contribution workspaces. Local test identities require development mode, loopback host and `NEXT_PUBLIC_ENABLE_LOCAL_ACCOUNTS=true`. Public browser-only demos explicitly opt in at build time with `NEXT_PUBLIC_ENABLE_DEMO_ACCOUNTS=true`. Real services take priority and never fall back to tests. See [账户与认证接入指南](docs/AUTHENTICATION.md) for test accounts, profile/draft scope, API contracts and the backend implementation sequence.
 
 `/signup` collects a username, email, password with confirmation, full name, institution, research group and career stage before registration, then returns to the original destination. Local test registration creates an unverified private member on this device; use Account on `/login` with the same username/email and password to return. Local passwords are salted PBKDF2 checks, never plaintext; only fictitious test details should be used. Real email/SMS registration and third-party signup require the identity backend; the frontend does not send messages or verify real identities itself.
+
+Administrator statistics and card/list discovery results: [operation guide](docs/STATISTICS_AND_RESULTS.md). Administrator entry: `/admin`; local read-only aggregate command: `npm --prefix ../materials-backend-lab run platform:stats` when run from this frontend directory.

@@ -146,6 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/workspace">My Contributions</Link>
             <Link href="/#team">Our Team</Link>
             <Link href="/#join-us">Contact &amp; Feedback</Link>
+            <Link href="/admin">Administration</Link>
           </nav>
           <span className="footer-note">
             CALYPSO High-Pressure

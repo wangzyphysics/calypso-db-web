@@ -11,6 +11,57 @@ export function contactHref(
 }
 export const platformUpdates = [
   {
+    date: "2026-10-14",
+    title: "Discovery controls and account management refinements",
+    changes: [
+      "Viewport-aware result menus with consistent triggers, outside-click dismissal and keyboard support.",
+      "Collapsible search filters at every breakpoint and an internally scrolling sidebar bounded by the periodic table.",
+      "Independently resizable table columns with minimum/maximum widths and a layout reset.",
+      "Dedicated account-management dialogs with fixed close controls, internal scrolling and focus restoration.",
+    ],
+  },
+  {
+    date: "2026-10-13",
+    title: "Pressure-aware result organization and administrative workflows",
+    changes: [
+      "Unified search filters, explicit result totals/ranges, configurable page sizes, sortable tables and column controls.",
+      "Source-phase grouping with exact pressure coverage and expandable structure records; unassigned records remain separate.",
+      "Administrative chart overview, account status tools, recoverable deletion/restoration and session revocation with audits.",
+      "Explicitly labeled synthetic demo cohorts for community maps and dashboards; live scientific records remain separate.",
+      "Staggered digit reels with varied duration/travel and reduced-motion support.",
+    ],
+  },
+  {
+    date: "2026-10-13",
+    title: "Discovery results and database statistics",
+    changes: [
+      "Viewport-triggered rolling numbers for verified database and community counts, with reduced-motion support.",
+      "Card/list results, record-source and data-type filters, pressure availability, pressure sorting and full-dataset filtering.",
+      "Country aggregates use declared research-profile countries and a minimum of three accounts per displayed country.",
+      "Administrator statistics, registration trends, review counts and JSON export; read-only local statistics CLI.",
+    ],
+  },
+  {
+    date: "2026-10-12",
+    title: "Registration, profile consistency and account administration",
+    changes: [
+      "Shared required research fields, explicit optional fields, inline email checks and China as the registration country default.",
+      "Registration email is copied into the research profile. Email verification remains visibly reserved for a future service.",
+      "Empty searches show all available records, ten per page.",
+      "Administrator account search, profile corrections, audited temporary-password resets and required password replacement.",
+    ],
+  },
+  {
+    date: "2026-10-12",
+    title: "Local PostgreSQL integration",
+    changes: [
+      "Real password registration, required research profiles and database-backed sessions.",
+      "Material statistics, source identifiers, seven query modes, filters and pagination from the local materials database.",
+      "Persistent contribution files and batches, submission, administrator review and recoverable archive.",
+      "Approved public contributions are labeled as original user data; private records stay out of shared search. VASP execution is awaiting connection.",
+    ],
+  },
+  {
     date: "2026-10-12",
     title: "Accounts and research profiles",
     changes: [

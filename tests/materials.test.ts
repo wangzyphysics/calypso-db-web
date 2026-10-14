@@ -146,6 +146,12 @@ test("search navigation encodes IDs and retains the selected type", () => {
   assert.equal(url.searchParams.get("type"), "id");
   assert.equal(url.searchParams.size, 2);
 });
+
+test("empty search navigates to the complete result set without inventing an element condition", () => {
+  assert.equal(searchHref("", "any"), "/explore#results");
+  assert.equal(searchHref("   ", "elements"), "/explore#results");
+  assert.equal(searchHref("", "system", { pressureMin: 0 }), "/explore?pressureMin=0#results");
+});
 test("unconfigured client never calls a data source or supplies sample records", async () => {
   let calls = 0;
   const client = createMaterialsClient(undefined, async () => {
@@ -275,4 +281,24 @@ test("recently added label requires declared order and actual ordered timestamps
     true,
   );
   assert.throws(() => materialsSchema.parse({ ...result, total: 0 }));
+});
+
+test("result facets and sort round-trip without changing the saved chemical search", () => {
+  const filters = normalizeFilters({ ...emptyFilters, provenance: "contributed", origin: "experimental", dataType: "raman", pressureAvailability: "reported", sort: "pressure_asc", pressureMin: "0" });
+  const url = new URL(searchHref("Fe-O", "elements", filters), "https://example.test");
+  assert.equal(url.searchParams.get("query"), "Fe,O");
+  assert.deepEqual(normalizeFilters(filtersFromParams(url.searchParams)), filters);
+  for (const key of ["provenance", "origin", "dataType", "pressureAvailability", "sort"] as const) assert.throws(() => normalizeFilters({ ...emptyFilters, [key]: "invalid" }));
+});
+
+test("phase group client requests server aggregation and exact group expansion", async () => {
+  const requests: string[] = [];
+  const client = createMaterialsClient("/api/materials", async input => {
+    requests.push(String(input));
+    return new Response(JSON.stringify({ groups: [], total: 0, groupsTotal: 0, offset: 0, limit: 20, grouping: "phase", definition: "Exact source phase identifiers" }), { headers: { "Content-Type": "application/json" } });
+  });
+  await client.phaseGroups({ query: "H", mode: "elements", filters: { pressureMin: 0 } });
+  const url = new URL(requests[0], "https://example.test");
+  assert.equal(url.searchParams.get("groupBy"), "phase");
+  assert.equal(url.searchParams.get("pressureMin"), "0");
 });

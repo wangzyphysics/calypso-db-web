@@ -369,7 +369,7 @@ export function ContributionRecordEditor({
               <li key={issue}>{issue}</li>
             ))}
           </ul>
-          <p>Incomplete records can still be saved as local drafts.</p>
+          <p>Incomplete records can still be saved as private drafts.</p>
         </div>
       )}
       <p className="record-checksum">SHA-256 · {file.sha256}</p>

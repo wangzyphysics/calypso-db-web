@@ -1,6 +1,8 @@
 # Independent materials API contract
 
-This is an interface reservation for a future verified backend. No API server, sample response, or fallback database is implemented in this project. The application has no dependency on the original CALYPSO site.
+> 2026-10-12: The local PostgreSQL API is now implemented in the adjacent materials-backend-lab/src/platform. See [active local configuration](LOCAL_DATABASE.md). Public previews use GET /previews; materials search requires a server session. The remaining contracts below include future interfaces; they are not all implemented.
+
+This document defines the frontend integration contract. A loopback PostgreSQL service now implements materials/statistics and bounded previews, with explicit unavailable scientific features. The application has no dependency on the original CALYPSO site.
 
 Configure `NEXT_PUBLIC_MATERIALS_API_BASE` to an HTTP(S) base URL or same-origin path. Responses are plain JSON; transport-specific envelopes should be normalized in `lib/materials/api.ts` when the actual backend contract is agreed.
 

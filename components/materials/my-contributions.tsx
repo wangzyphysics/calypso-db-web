@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useAuth } from "@/components/accounts/auth-context";
+import { contributionApi, serverOwner, type BatchState } from "@/lib/materials/contributions-api";
 import {
   AccountNavigation,
   TestModeNotice,
@@ -38,6 +39,11 @@ import {
 
 export function MyContributions() {
   const { ownerKey } = useAuth();
+  const onServer = serverOwner(ownerKey);
+  const [states, setStates] = useState<Record<string, BatchState>>({});
+  const [archived, setArchived] = useState<BatchDraft[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [events, setEvents] = useState<Array<{ sequence: string; type: string; occurredAt: string }>>([]);
   const [unassigned, setUnassigned] = useState<BatchDraft[]>([]);
   const params = useSearchParams();
   const [batches, setBatches] = useState<BatchDraft[]>([]);
@@ -46,11 +52,18 @@ export function MyContributions() {
   const [deleting, setDeleting] = useState("");
   const [confirmDelete, setConfirmDelete] = useState("");
   const [tab, setTab] = useState<"records" | "status">("records");
+  async function loadData() {
+    if (onServer) {
+      const [active, removed] = await Promise.all([contributionApi.list(), contributionApi.list(true)]);
+      return { batches: active.items.map(i => i.draft), states: Object.fromEntries(active.items.map(i => [i.state.id, i.state])), archived: removed.items.map(i => i.draft) };
+    }
+    return { batches: await listLocalBatches(ownerKey), states: {}, archived: [] };
+  }
   async function refresh() {
     setLoading(true);
     setError("");
     try {
-      setBatches(await listLocalBatches(ownerKey));
+      const data = await loadData(); setBatches(data.batches); setStates(data.states); setArchived(data.archived);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -59,9 +72,9 @@ export function MyContributions() {
   }
   useEffect(() => {
     let active = true;
-    listLocalBatches(ownerKey)
-      .then((values) => {
-        if (active) setBatches(values);
+    loadData()
+      .then((data) => {
+        if (active) { setBatches(data.batches); setStates(data.states); setArchived(data.archived); }
       })
       .catch((e) => {
         if (active) setError(e.message);
@@ -84,6 +97,18 @@ export function MyContributions() {
   const selected = requestedId
     ? batches.find((b) => b.id === requestedId)
     : batches[0];
+  const state = selected ? states[selected.id] : undefined;
+  useEffect(() => {
+    if (!onServer || !selected) return;
+    const id = selected.id; let active = true;
+    const poll = async () => {
+      if (document.visibilityState === "hidden") return;
+      try { const data = await contributionApi.events(id); if (active) { setStates(values => ({ ...values, [id]: data.state })); setEvents(data.events); } }
+      catch (e) { if (active) setError(e instanceof Error ? e.message : "Could not refresh batch status."); }
+    };
+    setEvents([]); void poll(); const timer = setInterval(() => void poll(), 15000);
+    return () => { active = false; clearInterval(timer); };
+  }, [onServer, selected?.id]);
   const readiness = useMemo(
     () =>
       selected
@@ -102,12 +127,20 @@ export function MyContributions() {
     try {
       await deleteLocalBatch(id, ownerKey);
       setBatches((values) => values.filter((b) => b.id !== id));
+      if (onServer) await refresh();
       setConfirmDelete("");
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setDeleting("");
     }
+  }
+  async function submit() {
+    if (!selected || submitting) return;
+    setSubmitting(true); setError("");
+    try { await contributionApi.submit(selected.id); await refresh(); setTab("status"); }
+    catch (e) { setError(e instanceof Error ? e.message : "Submission failed."); }
+    finally { setSubmitting(false); }
   }
   const time = (value: string) =>
     new Date(value).toLocaleString("en-GB", {
@@ -133,6 +166,10 @@ export function MyContributions() {
         </header>
         <AccountNavigation active="contributions" />
         <TestModeNotice />
+        {archived.length > 0 && <details className="unassigned-drafts"><summary>{archived.length} archived database batches</summary>
+          <p>Archived originals remain in the database and are excluded from public search. Restore a batch to return it to this workspace.</p>
+          {archived.map(batch => <div key={batch.id}><span>{batch.title}</span><button className="secondary-link" onClick={async () => { try { await contributionApi.restore(batch.id); await refresh(); } catch (e) { setError((e as Error).message); } }}>Restore batch</button></div>)}
+        </details>}
         {unassigned.length > 0 && (
           <details className="unassigned-drafts">
             <summary>
@@ -174,10 +211,7 @@ export function MyContributions() {
         <div className="batch-mode-notice" data-reveal>
           <Info size={17} />
           <p>
-            <strong>This account’s local drafts</strong> The batches below are
-            saved on this device under your current account. Actual submission,
-            review, publication and live VASP progress will appear when their
-            services are connected.
+            <strong>{onServer ? "This account’s database batches" : "This account’s local drafts"}</strong> {onServer ? "Original files and metadata are saved in PostgreSQL. Submit a prepared draft for review; status below refreshes from the server. VASP execution is not connected." : "The batches below are saved on this device under your current account. Actual submission, review, publication and live VASP progress will appear when their services are connected."}
           </p>
         </div>
         <div className="workspace-summary" data-reveal>
@@ -195,13 +229,13 @@ export function MyContributions() {
           </div>
           <div>
             <span>Submitted to platform</span>
-            <strong>—</strong>
-            <small>Submission service pending</small>
+            <strong>{onServer ? Object.values(states).filter(s => s.review !== "not-submitted").length : "—"}</strong>
+            <small>{onServer ? "Recorded submissions" : "Submission service pending"}</small>
           </div>
           <div>
             <span>VASP workflow progress</span>
             <strong>—</strong>
-            <small>Workflow service pending</small>
+            <small>VASP workflow adapter pending</small>
           </div>
         </div>
         {error && (
@@ -219,7 +253,7 @@ export function MyContributions() {
         )}
         {loading ? (
           <div className="workspace-loading" role="status">
-            Loading local drafts…
+            {onServer ? "Loading database batches…" : "Loading local drafts…"}
           </div>
         ) : batches.length ? (
           <div className="workspace-batch-layout">
@@ -245,7 +279,7 @@ export function MyContributions() {
                 >
                   <span>
                     <Files size={16} />
-                    Local draft
+                    {onServer ? states[batch.id]?.review === "not-submitted" ? "Database draft" : states[batch.id]?.review.replaceAll("-", " ") : "Local draft"}
                   </span>
                   <strong>{batch.title}</strong>
                   <small>
@@ -273,40 +307,41 @@ export function MyContributions() {
               >
                 <header className="workspace-detail-heading">
                   <div>
-                    <span className="eyebrow">LOCAL DRAFT · NOT SUBMITTED</span>
+                    <span className="eyebrow">{onServer ? "DATABASE BATCH · " + (state?.review ?? "loading").replaceAll("-", " ").toUpperCase() : "LOCAL DRAFT · NOT SUBMITTED"}</span>
                     <h2>{selected.title}</h2>
                     <p>
                       Updated {time(selected.updatedAt)} ·{" "}
                       {selected.contributor.name || "Contributor not set"}
                     </p>
                   </div>
-                  <Link
+                  {(!onServer || !state || ["not-submitted", "needs-information"].includes(state.review)) && <Link
                     href={
                       "/contribute?draft=" + encodeURIComponent(selected.id)
                     }
                     className="secondary-link"
                   >
                     Edit draft <ArrowUpRight size={14} />
-                  </Link>
+                  </Link>}
                 </header>
                 <div className="workspace-status-strip">
                   <div>
                     <span>Review</span>
-                    <strong>Not submitted</strong>
+                    <strong>{state ? state.review.replaceAll("-", " ") : "Not submitted"}</strong>
                   </div>
                   <div>
                     <span>Public visibility</span>
-                    <strong>Not published</strong>
+                    <strong>{state?.records[0]?.publication === "public" ? "Public contribution" : "Private"}</strong>
                   </div>
                   <div>
                     <span>Computation</span>
-                    <strong>Not started</strong>
+                    <strong>{state?.records.some(r => r.computation === "pending-eligibility") ? "Awaiting workflow adapter" : "Not started"}</strong>
                   </div>
                   <div>
                     <span>Standardized ingestion</span>
                     <strong>Not ingested</strong>
                   </div>
                 </div>
+                {state?.reviewNotes && <p className="form-note"><strong>Review notes: </strong>{state.reviewNotes}</p>}
                 <div
                   className="workspace-tabs"
                   role="group"
@@ -370,7 +405,7 @@ export function MyContributions() {
                                 ? "Needs context"
                                 : "Format ready"}
                             </strong>
-                            <small>Review not started</small>
+                            <small>{state ? "Review: " + state.review.replaceAll("-", " ") : "Review not started"}</small>
                           </div>
                         </article>
                       ))}
@@ -386,7 +421,7 @@ export function MyContributions() {
                     <div className="workflow-connection-note">
                       <Clock3 size={21} />
                       <div>
-                        <h3>Awaiting submission and workflow services</h3>
+                        <h3>{onServer ? "Server-reported review & workflow" : "Awaiting submission and workflow services"}</h3>
                         <p>
                           No computation has been started. A percentage is
                           unavailable until a server reports the actual run and
@@ -394,6 +429,12 @@ export function MyContributions() {
                         </p>
                       </div>
                     </div>
+                    {state && <div className="server-record-statuses">{state.records.map(record => <article key={record.id}><strong>{record.id}</strong><dl>
+                      <div><dt>Review</dt><dd>{record.review.replaceAll("-", " ")}</dd></div><div><dt>Publication</dt><dd>{record.publication}</dd></div>
+                      <div><dt>Calculation</dt><dd>{record.computation.replaceAll("-", " ")}</dd></div><div><dt>Current step</dt><dd>{record.currentStep ?? "Not started"}</dd></div>
+                      <div><dt>Progress</dt><dd>{record.percent === null ? "Unavailable" : record.percent + "%"}</dd></div><div><dt>Ingestion</dt><dd>{record.ingestion.replaceAll("-", " ")}</dd></div>
+                    </dl></article>)}</div>}
+                    {events.length > 0 && <div className="batch-event-list"><h3>Batch history</h3><ol>{events.map(event => <li key={event.sequence}><span>{event.type.replaceAll(".", " ")}</span><time>{time(event.occurredAt)}</time></li>)}</ol></div>}
                     <div className="workspace-policy-summary">
                       <p>
                         <strong>Visibility intent</strong>
@@ -467,6 +508,7 @@ export function MyContributions() {
                   </div>
                 )}
                 <footer className="workspace-detail-actions">
+                  {onServer && state && ["not-submitted", "needs-information"].includes(state.review) && <button className="primary-link" disabled={submitting || !readiness || readiness.batchIssues.length > 0 || readiness.ready !== selected.records.length} onClick={() => void submit()}>{submitting ? "Submitting…" : "Submit for review"}</button>}
                   <button
                     type="button"
                     className="text-link"
@@ -481,14 +523,13 @@ export function MyContributions() {
                     onClick={() => setConfirmDelete(selected.id)}
                   >
                     <Trash2 size={14} />
-                    Delete local draft
+                    {onServer ? "Archive batch" : "Delete local draft"}
                   </button>
                 </footer>
                 {confirmDelete === selected.id && (
                   <div className="local-delete-confirm" role="alert">
                     <p>
-                      Delete this batch from this browser? Export a copy first
-                      if you need to keep its original files.
+                      {onServer ? "Archive this database batch? Original files are preserved; you can restore it from Archived batches." : "Delete this batch from this browser? Export a copy first if you need to keep its original files."}
                     </p>
                     <button
                       type="button"
@@ -503,7 +544,7 @@ export function MyContributions() {
                       disabled={Boolean(deleting)}
                       onClick={() => void remove(selected.id)}
                     >
-                      {deleting ? "Deleting…" : "Delete from this browser"}
+                      {deleting ? onServer ? "Archiving…" : "Deleting…" : onServer ? "Archive in database" : "Delete from this browser"}
                     </button>
                   </div>
                 )}
@@ -513,8 +554,7 @@ export function MyContributions() {
               <div className="workspace-empty surface-card">
                 <h2>Draft not found.</h2>
                 <p>
-                  This batch is unavailable in this browser. Open a saved batch
-                  from the list or import an exported draft.
+                  {onServer ? "This batch is unavailable for this account. Open a saved batch from the list or restore it from Archived batches." : "This batch is unavailable in this browser. Open a saved batch from the list or import an exported draft."}
                 </p>
                 <Link href="/workspace" className="primary-link">
                   Show saved drafts

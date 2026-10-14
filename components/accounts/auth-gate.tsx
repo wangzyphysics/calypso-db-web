@@ -17,6 +17,10 @@ export function AuthGate({
     router = useRouter(),
     pathname = usePathname();
   useEffect(() => {
+    if (!auth.loading && auth.user?.passwordChangeRequired && pathname !== "/account") {
+      router.replace("/account?tab=settings&returnTo=" + encodeURIComponent(window.location.pathname + window.location.search + window.location.hash));
+      return;
+    }
     if (!auth.loading && !auth.user && !auth.error)
       router.replace(
         loginHref(
@@ -26,6 +30,7 @@ export function AuthGate({
         ),
       );
   }, [auth.loading, auth.user, auth.error, pathname, router]);
+  if (auth.user?.passwordChangeRequired && pathname !== "/account") return <main id="main-content" className="account-page"><Container><p role="status">Change your temporary password before continuing.</p></Container></main>;
   if (auth.loading || !auth.user)
     return (
       <main id="main-content" className="account-page">

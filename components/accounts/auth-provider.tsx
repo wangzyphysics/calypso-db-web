@@ -11,7 +11,9 @@ import * as local from "@/lib/accounts/local-test";
 import { AuthContext, type Mode } from "./auth-context";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = useState<Mode>("unconfigured"),
+  // Avoid restarting initialization while an anonymous service session is being
+  // created: two responses can otherwise leave its cookie and CSRF token mismatched.
+  const [mode, setMode] = useState<Mode>(identityClient.configured ? "service" : "unconfigured"),
     [loading, setLoading] = useState(true);
   const [user, setUser] = useState<AccountUser | null>(null),
     [error, setError] = useState("");

@@ -1,5 +1,6 @@
 "use client";
 import { batchSchema, type BatchDraft } from "./batch-contribution";
+import { contributionApi, serverOwner } from "./contributions-api";
 
 const databaseName = "calypso-contribution-drafts";
 const legacyStoreName = "batches",
@@ -75,6 +76,7 @@ async function transact<T>(
 }
 export async function saveLocalBatch(batch: BatchDraft, ownerKey: string) {
   checkOwner(ownerKey);
+  if (serverOwner(ownerKey)) return (await contributionApi.save(batch)).draft;
   const checked = batchSchema.parse({
     ...batch,
     updatedAt: new Date().toISOString(),
@@ -86,6 +88,7 @@ export async function saveLocalBatch(batch: BatchDraft, ownerKey: string) {
 }
 export async function listLocalBatches(ownerKey: string) {
   checkOwner(ownerKey);
+  if (serverOwner(ownerKey)) return (await contributionApi.list()).items.map(item => item.draft);
   const values = await transact<unknown[]>("readonly", (store) =>
     store.index("ownerKey").getAll(IDBKeyRange.only(ownerKey)),
   );
@@ -98,6 +101,7 @@ export async function readLocalBatch(
   ownerKey: string,
 ): Promise<BatchDraft | null> {
   checkOwner(ownerKey);
+  if (serverOwner(ownerKey)) return (await contributionApi.read(id)).draft;
   const value = await transact<{ batch: unknown } | undefined>(
     "readonly",
     (store) => store.get([ownerKey, id]),
@@ -106,6 +110,7 @@ export async function readLocalBatch(
 }
 export async function deleteLocalBatch(id: string, ownerKey: string) {
   checkOwner(ownerKey);
+  if (serverOwner(ownerKey)) { await contributionApi.archive(id); return; }
   await transact("readwrite", (store) => store.delete([ownerKey, id]));
 }
 export function downloadText(

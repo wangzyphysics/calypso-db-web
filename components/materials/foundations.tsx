@@ -48,7 +48,7 @@ export function StatCard({
   pending = false,
 }: {
   label: string;
-  value: string | null;
+  value: React.ReactNode | null;
   note: string;
   pending?: boolean;
 }) {

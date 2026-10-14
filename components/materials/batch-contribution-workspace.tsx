@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useAuth } from "@/components/accounts/auth-context";
 import { contributionAttribution } from "@/lib/accounts/model";
+import { serverOwner } from "@/lib/materials/contributions-api";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -50,6 +51,7 @@ import { contactEmail, contactHref } from "@/lib/materials/site-information";
 
 export function BatchContributionWorkspace() {
   const { user, ownerKey } = useAuth();
+  const onServer = serverOwner(ownerKey);
   const [draft, setDraft] = useState<BatchDraft>(newBatch);
   const [origin, setOrigin] = useState<Origin>("experimental");
   const [defaultType, setDefaultType] = useState<DataType>("raman");
@@ -85,7 +87,7 @@ export function BatchContributionWorkspace() {
         if (!current) return;
         if (!batch)
           throw new Error(
-            "This draft was not found in this browser. Import an exported JSON draft or create a new one.",
+            onServer ? "This draft is unavailable for this account. Open My Contributions or create a new draft." : "This draft was not found in this browser. Import an exported JSON draft or create a new one.",
           );
         setDraft(batch);
         setSelected(batch.records[0]?.id ?? "");
@@ -328,7 +330,7 @@ export function BatchContributionWorkspace() {
     if (operationActive.current) return;
     operationActive.current = true;
     setError("");
-    setBusy("Saving to this browser…");
+    setBusy(onServer ? "Saving to the database…" : "Saving to this browser…");
     try {
       if (!draft.files.length || !draft.records.length)
         throw new Error("Add at least one record before saving.");
@@ -336,7 +338,7 @@ export function BatchContributionWorkspace() {
       setDraft(saved);
       setDirty(false);
       setMessage(
-        "Draft saved in this browser. Nothing has been uploaded or published.",
+        onServer ? "Draft and original files saved in PostgreSQL. Submit from My Contributions when ready for review." : "Draft saved in this browser. Nothing has been uploaded or published.",
       );
       if (view) router.push("/workspace?batch=" + encodeURIComponent(saved.id));
     } catch (e) {
@@ -420,10 +422,9 @@ export function BatchContributionWorkspace() {
         <div className="batch-mode-notice" data-reveal>
           <Info size={17} />
           <p>
-            <strong>Local draft workspace</strong> Files stay in this browser.
+            <strong>{onServer ? "Database draft workspace" : "Local draft workspace"}</strong> {onServer ? "Saving stores original files in the local PostgreSQL database. Submission is a separate step; drafts are private." : "Files stay in this browser."}
             Save account-specific drafts to return later, or export a copy.
-            Submission, review and VASP workflow services are awaiting
-            connection.
+            {onServer ? "Submit saved, complete batches from My Contributions. VASP execution awaits the workflow adapter." : "Submission, review and VASP workflow services are awaiting connection."}
           </p>
         </div>
         <section
@@ -438,7 +439,7 @@ export function BatchContributionWorkspace() {
               {draft.files.length
                 ? dirty
                   ? "Unsaved changes"
-                  : "Saved locally"
+                  : onServer ? "Saved in database" : "Saved locally"
                 : "New draft"}
             </span>
           </div>
@@ -644,8 +645,8 @@ export function BatchContributionWorkspace() {
                 </button>
               </div>
               <p className="visibility-draft-note">
-                This choice records your intent. Saving a local draft never
-                publishes it.
+                Saving a draft keeps it private. Publication requires submission,
+                approval and your public visibility choice.
               </p>
               <div className="batch-public-legend">
                 <Star size={15} />
@@ -846,7 +847,7 @@ export function BatchContributionWorkspace() {
                 disabled={disabled}
                 onClick={() => {
                   change({
-                    contributor: contributionAttribution(user.profile),
+                    contributor: contributionAttribution({ ...user.profile, contactEmail: user.profile.contactEmail || user.email || "" }),
                     permissionConfirmed: false,
                   });
                   setMessage(
@@ -951,9 +952,7 @@ export function BatchContributionWorkspace() {
             <p className="form-note">{readiness.batchIssues.join(" ")}</p>
           )}
           <p className="form-note">
-            Incomplete metadata may be saved as a draft. Saved files and contact
-            details remain on this device; browser data clearing can remove
-            them. Export a copy for safekeeping.
+            {onServer ? "Incomplete metadata may be saved privately in the database. Export a copy for safekeeping; submit only when the batch is ready for review." : "Incomplete metadata may be saved as a draft. Saved files and contact details remain on this device; browser data clearing can remove them. Export a copy for safekeeping."}
           </p>
           {busy && (
             <p role="status" className="batch-operation">
@@ -995,7 +994,7 @@ export function BatchContributionWorkspace() {
             </button>
           </div>
           <div className="batch-service-footer">
-            <span>Submission service awaiting connection</span>
+            <span>{onServer ? "Submit for review from My Contributions" : "Submission service awaiting connection"}</span>
             <a href={contactHref("Data contribution")}>
               {contactEmail} <ArrowUpRight size={14} />
             </a>

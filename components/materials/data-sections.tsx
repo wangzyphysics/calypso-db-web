@@ -1,30 +1,22 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { Database, SearchX } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   materialsClient,
   MaterialsApiError,
-  hasVerifiedChronology,
   type ResourceState,
   type DatabaseStatistics,
   type MaterialRecord,
-  type MaterialsResponse,
 } from "@/lib/materials/api";
 import {
-  displaySearchQuery,
-  type SearchMode,
-  type SearchFilters,
-} from "@/lib/materials/search";
-import {
   ChemicalFormula,
-  EmptyState,
-  LoadingSkeleton,
   SectionHeader,
   StatCard,
 } from "./foundations";
 
-function useResource<T>(load: (signal: AbortSignal) => Promise<T>) {
+import { AnimatedNumber } from "./animated-number";
+
+export function useResource<T>(load: (signal: AbortSignal) => Promise<T>) {
   const [retry, setRetry] = useState(0);
   const [snapshot, setSnapshot] = useState(() => ({
     load,
@@ -97,7 +89,7 @@ export function DatabaseOverview({
       value:
         data?.materials.count == null
           ? null
-          : numberFormat.format(data.materials.count),
+          : <AnimatedNumber value={data.materials.count} />,
       note: data?.materials.definition ?? "Distinct material identities",
     },
     {
@@ -105,7 +97,7 @@ export function DatabaseOverview({
       value:
         data?.phases.count == null
           ? null
-          : numberFormat.format(data.phases.count),
+          : <AnimatedNumber value={data.phases.count} sequence={1} />,
       note: data?.phases.definition ?? "Distinct structural phases",
     },
     {
@@ -113,7 +105,7 @@ export function DatabaseOverview({
       value:
         data?.structureRecords.count == null
           ? null
-          : numberFormat.format(data.structureRecords.count),
+          : <AnimatedNumber value={data.structureRecords.count} sequence={2} />,
       note:
         data?.structureRecords.definition ?? "Records at available pressures",
     },
@@ -123,7 +115,7 @@ export function DatabaseOverview({
         data?.pressureCoverage.minGPa == null ||
         data.pressureCoverage.maxGPa == null
           ? null
-          : `${String(data.pressureCoverage.minGPa)}–${String(data.pressureCoverage.maxGPa)} GPa`,
+          : <><AnimatedNumber value={data.pressureCoverage.minGPa} sequence={3} />–<AnimatedNumber value={data.pressureCoverage.maxGPa} sequence={4} /> <span className="stat-unit">GPa</span></>,
       note:
         data?.pressureCoverage.definition ?? "Verified database pressure range",
     },
@@ -174,9 +166,9 @@ export function DatabaseOverview({
     </section>
   );
 }
-export function MaterialPreview({ record }: { record: MaterialRecord }) {
+export function MaterialPreview({ record, index = 0 }: { record: MaterialRecord; index?: number }) {
   return (
-    <article className="material-card">
+    <article className="material-card" tabIndex={0} style={{ animationDelay: `${Math.min(index, 5) * 45}ms` }}>
       <div className="material-card-top">
         <h3>
           <ChemicalFormula formula={record.formula} />
@@ -187,11 +179,12 @@ export function MaterialPreview({ record }: { record: MaterialRecord }) {
             : `${String(record.pressureGPa)} GPa`}
         </span>
       </div>
-      <p className="record-id">{record.materialId}</p>
+      <p className="record-id" title={record.materialId}>{record.externalIds?.join(" · ") || record.materialId}</p>
+      {record.provenance === "contributed" && <p className="contributed-record-badge"><span aria-hidden="true">★</span> Reviewed contribution · {record.origin} · {record.dataType} · not standardized</p>}
       <dl className="record-metadata">
         <div>
           <dt>Phase</dt>
-          <dd>{record.phaseId ?? "Not supplied"}</dd>
+          <dd title={record.phaseId ?? undefined}>{record.phaseLabel ?? record.phaseId ?? "Not supplied"}</dd>
         </div>
         <div>
           <dt>Space group</dt>
@@ -207,109 +200,5 @@ export function MaterialPreview({ record }: { record: MaterialRecord }) {
         <span>Detail workspace · Upcoming</span>
       </div>
     </article>
-  );
-}
-export function MaterialsSection({
-  query,
-  mode = "any",
-  search = false,
-  filters,
-}: {
-  query?: string;
-  mode?: SearchMode;
-  search?: boolean;
-  filters?: SearchFilters;
-}) {
-  const loader = useCallback(
-    (signal: AbortSignal) =>
-      materialsClient.materials({ query, mode, filters, signal }),
-    [query, mode, filters],
-  );
-  const { state, retry } = useResource<MaterialsResponse>(loader);
-  const hasCriteria =
-    Boolean(query) || Boolean(filters && Object.keys(filters).length);
-  const title = search
-    ? query
-      ? `Search results for “${displaySearchQuery(query, mode)}”`
-      : hasCriteria
-        ? "Filtered Materials"
-        : "Explore Materials"
-    : state.status === "ready" && hasVerifiedChronology(state.data)
-      ? "Recently Added Materials"
-      : "Explore Materials";
-  return (
-    <section
-      className={search ? "results-section" : "content-section"}
-      id={search ? "results" : "materials"}
-      data-reveal
-      aria-busy={state.status === "loading"}
-    >
-      <SectionHeader
-        number={search ? undefined : "04"}
-        title={title}
-        description={
-          search
-            ? "Exact structure records at their reported pressure. Record availability does not establish phase stability."
-            : "Discover crystal structures at their recorded pressures."
-        }
-        action={
-          state.status === "ready" ? (
-            <span className="data-status">
-              {numberFormat.format(state.data.total)} structure records
-            </span>
-          ) : undefined
-        }
-      />
-      <div aria-live="polite">
-        {state.status === "loading" && <LoadingSkeleton />}
-        {state.status === "unconfigured" && (
-          <EmptyState
-            icon={Database}
-            title={
-              hasCriteria
-                ? "Your search is ready. The database is not connected yet."
-                : "A space for your next discovery"
-            }
-            description={
-              hasCriteria
-                ? "Your search is preserved in the URL. Matching materials will appear here once a verified data source is connected."
-                : "Material previews will appear when a verified data source is connected. No sample records are shown."
-            }
-          />
-        )}
-        {state.status === "error" && (
-          <EmptyState
-            title="Material data could not be loaded"
-            description={state.message}
-          >
-            <Button variant="outline" onClick={retry}>
-              Retry
-            </Button>
-          </EmptyState>
-        )}
-        {state.status === "ready" &&
-          (state.data.items.length ? (
-            <div className="material-grid">
-              {state.data.items.map((record) => (
-                <MaterialPreview key={record.recordId} record={record} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={SearchX}
-              title={
-                query
-                  ? "No matching structure records"
-                  : "No structure records available"
-              }
-              description={
-                query
-                  ? "Try a different formula, element combination, or material ID."
-                  : "The connected data source has not supplied any material records."
-              }
-            />
-          ))}
-      </div>
-    </section>
   );
 }
