@@ -7,6 +7,7 @@ import {
   TestModeNotice,
 } from "@/components/accounts/account-navigation";
 import { useSearchParams } from "next/navigation";
+import { ContributionHierarchySummary } from "./contribution-hierarchy-summary";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpRight,
@@ -374,6 +375,8 @@ export function MyContributions() {
                         phase stability.
                       </p>
                     </div>
+                    <ContributionHierarchySummary phases={selected.phases} conditions={selected.conditions} records={selected.records} files={selected.files}/>
+                    <details className="individual-record-details"><summary>Individual record conditions & preparation checks</summary>
                     <div className="workspace-records">
                       {selected.records.map((record) => (
                         <article key={record.id}>
@@ -384,19 +387,19 @@ export function MyContributions() {
                             <h3>{record.formula || "Formula not set"}</h3>
                             <p>
                               {dataTypes[record.dataType]} ·{" "}
-                              {record.sampleId || "Sample not set"}
+                              {record.acquisitionLabel || record.id}
                             </p>
                           </div>
                           <div>
                             <strong>
                               {record.pressureGPa.trim()
-                                ? record.pressureGPa + " GPa"
-                                : "Pressure not set"}
+                                ? record.pressureGPa + " GPa" + (record.pressureMode==="target"?" target":"")
+                                : "Pressure unreported"}
                             </strong>
                             <small>
                               {record.temperatureK.trim()
                                 ? record.temperatureK + " K"
-                                : "Temperature not set"}
+                                : record.temperatureMode==="not-modelled"?"T not modelled":"Temperature unreported"}
                             </small>
                           </div>
                           <div>
@@ -410,6 +413,7 @@ export function MyContributions() {
                         </article>
                       ))}
                     </div>
+                    </details>
                     {readiness?.batchIssues.length ? (
                       <p className="form-note">
                         Before submission: {readiness.batchIssues.join(" ")}

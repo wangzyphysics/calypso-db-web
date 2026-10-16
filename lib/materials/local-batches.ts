@@ -1,6 +1,6 @@
 "use client";
-import { batchSchema, type BatchDraft } from "./batch-contribution";
-import { contributionApi, serverOwner } from "./contributions-api";
+import { batchSchema, importBatchDraft, type BatchDraft } from "./batch-contribution.ts";
+import { contributionApi, serverOwner } from "./contributions-api.ts";
 
 const databaseName = "calypso-contribution-drafts";
 const legacyStoreName = "batches",
@@ -76,6 +76,7 @@ async function transact<T>(
 }
 export async function saveLocalBatch(batch: BatchDraft, ownerKey: string) {
   checkOwner(ownerKey);
+  if (batchSchema.parse(batch).exampleOnly) throw new Error("Teaching examples cannot be saved as research data. Return to your own draft.");
   if (serverOwner(ownerKey)) return (await contributionApi.save(batch)).draft;
   const checked = batchSchema.parse({
     ...batch,
@@ -152,8 +153,7 @@ export async function copyUnassignedBatch(id: string, ownerKey: string) {
   const original = batchSchema.parse(value);
   return saveLocalBatch(
     {
-      ...original,
-      id: crypto.randomUUID(),
+      ...(await importBatchDraft(original)),
       createdAt: new Date().toISOString(),
       permissionConfirmed: false,
     },

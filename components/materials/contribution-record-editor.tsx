@@ -4,6 +4,8 @@ import { FileText, Check, AlertCircle } from "lucide-react";
 import {
   curvePoints,
   dataTypes,
+  phaseName, conditionName,
+  type DraftPhase, type DraftCondition,
   type DraftRecord,
   type DraftFile,
   type FileInspection,
@@ -128,14 +130,14 @@ export function ContributionRecordEditor({
   record,
   file,
   inspection,
-  records,
+  records, phases, conditions,
   issues,
   update,
 }: {
   record: DraftRecord;
   file: DraftFile;
   inspection: FileInspection;
-  records: DraftRecord[];
+  records: DraftRecord[]; phases: DraftPhase[]; conditions: DraftCondition[];
   issues: string[];
   update: (patch: Partial<DraftRecord>) => void;
 }) {
@@ -163,7 +165,7 @@ export function ContributionRecordEditor({
       <div className="record-editor-heading">
         <div>
           <span className="eyebrow">{record.id}</span>
-          <h3>Record context</h3>
+          <h3>Data card</h3>
         </div>
         <span className="record-check-badge">
           {issues.length ? <AlertCircle size={13} /> : <Check size={13} />}
@@ -172,18 +174,7 @@ export function ContributionRecordEditor({
       </div>
       <p className="record-original-path">{file.path}</p>
       <div className="record-field-grid">
-        <label>
-          Data origin
-          <select
-            value={record.origin}
-            onChange={(e) =>
-              update({ origin: e.target.value as DraftRecord["origin"] })
-            }
-          >
-            <option value="experimental">Experimental</option>
-            <option value="theoretical">Theoretical</option>
-          </select>
-        </label>
+        <div className="data-origin-field"><span>Data source · required</span><div className="batch-origin-controls" role="group" aria-label="Data source"><button type="button" aria-pressed={record.origin==="experimental"} onClick={()=>update({origin:"experimental"})}>Experimental</button><button type="button" aria-pressed={record.origin==="theoretical"} onClick={()=>update({origin:"theoretical"})}>Theoretical</button></div></div>
         <label>
           Data type
           <select
@@ -199,49 +190,25 @@ export function ContributionRecordEditor({
             ))}
           </select>
         </label>
-        {field(
-          "Sample ID",
-          "sampleId",
-          "Your sample or calculation identifier",
-        )}
-        {field("Chemical formula", "formula", "e.g. Fe₂O₃")}
-        {field(
-          "Recorded pressure (GPa)",
-          "pressureGPa",
-          "Actual recorded value",
-          true,
-        )}
-        {field(
-          "Temperature (K)",
-          "temperatureK",
-          record.origin === "experimental"
-            ? "Measurement temperature"
-            : "Optional",
-          true,
-        )}
+        {field("Acquisition / calculation label · optional", "acquisitionLabel", "e.g. XRD repeat 2")}
+        {field("Sample / run identifier · optional", "sampleId", "Your identifier")}
+        <label>Phase<select value={record.phaseId} onChange={e=>{const c=conditions.find(c=>c.phaseId===e.target.value);if(c)update({phaseId:e.target.value,conditionId:c.id});}}>{phases.map(p=><option value={p.id} key={p.id}>{phaseName(p)} · {p.formula||"Formula pending"}</option>)}</select></label>
+        <label>P–T condition group<select value={record.conditionId} onChange={e=>update({conditionId:e.target.value})}>{conditions.filter(c=>c.phaseId===record.phaseId).map(c=><option value={c.id} key={c.id}>{conditionName(c)}</option>)}</select></label>
+        {field(record.origin==="experimental"?"Instrument · optional":"Software / workflow · optional","instrument")}
+        {field("Acquisition / calculation time · optional","acquiredAt","ISO date/time, if reported")}
       </div>
+      <p className="form-note">Composition and P–T context are shared with the selected group. Source labels do not establish phase identity.</p>
+      <details className="record-condition-overrides"><summary>Record-specific pressure / temperature</summary>
+        <label className="permission-checkbox"><input type="checkbox" checked={record.overrideConditions} onChange={e=>update({overrideConditions:e.target.checked})}/><span>Use this record’s actual conditions instead of the group values</span></label>
+        {record.overrideConditions && <div className="record-field-grid">
+          <label>Pressure definition<select value={record.pressureMode} onChange={e=>update({pressureMode:e.target.value as DraftRecord["pressureMode"],...(e.target.value==="unreported"?{pressureGPa:""}:{})})}><option value="reported">Reported</option><option value="target">Calculation target</option><option value="unreported">Unreported</option></select></label>
+          {record.pressureMode!=="unreported" && field("Record pressure · GPa","pressureGPa","",true)}
+          <label>Temperature definition<select value={record.temperatureMode} onChange={e=>update({temperatureMode:e.target.value as DraftRecord["temperatureMode"],...(e.target.value!=="reported"?{temperatureK:""}:{})})}><option value="reported">Specified</option><option value="not-modelled">Not modelled · theory</option><option value="unreported">Unreported</option></select></label>
+          {record.temperatureMode==="reported" && field("Record temperature · K","temperatureK","",true)}
+        </div>}
+      </details>
       <div className="record-field-grid">
-        {field(
-          "Phase assignment · optional",
-          "phaseLabel",
-          "Leave blank if not established",
-        )}
-        <label>
-          Related structure · optional
-          <select
-            value={record.structureRecordId}
-            onChange={(e) => update({ structureRecordId: e.target.value })}
-          >
-            <option value="">No structure association</option>
-            {records
-              .filter((r) => r.id !== record.id && r.dataType === "structure")
-              .map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.id} · {r.sampleId || "sample not set"}
-                </option>
-              ))}
-          </select>
-        </label>
+        <label>Exact structure record · optional<select value={record.structureRecordId} onChange={e=>update({structureRecordId:e.target.value})}><option value="">No structure association</option>{records.filter(r=>r.id!==record.id && r.dataType==="structure" && r.phaseId===record.phaseId && r.conditionId===record.conditionId).map(r=><option key={r.id} value={r.id}>{r.acquisitionLabel||r.id}</option>)}</select></label>
       </div>
       {record.structureRecordId && (
         <p className="form-note">

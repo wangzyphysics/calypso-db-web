@@ -20,11 +20,49 @@ export type DataType = keyof typeof dataTypes;
 export type Origin = "experimental" | "theoretical";
 export type Visibility = "private" | "public-after-review";
 const shortText = z.string().max(300);
+export const phaseStates = { unassigned: "Unidentified", tentative: "Tentative", identified: "Identified" } as const;
+export const phaseSchema = z.object({
+  id: shortText.min(1), name: shortText.default(""), formula: shortText,
+  identification: z.enum(["unassigned", "tentative", "identified"]).default("unassigned"),
+  evidence: z.string().max(4000).default(""),
+  feedComposition: shortText.default(""), measuredComposition: shortText.default(""),
+});
+export const conditionSchema = z.object({
+  id: shortText.min(1), phaseId: shortText.min(1), label: shortText.default(""),
+  pressureMode: z.enum(["reported", "target", "unreported"]).default("unreported"),
+  pressureGPa: shortText.default(""),
+  temperatureMode: z.enum(["reported", "not-modelled", "unreported"]).default("unreported"),
+  temperatureK: shortText.default(""),
+  path: z.enum(["unspecified", "compression", "decompression", "heating", "cooling", "calculation"]).default("unspecified"),
+  notes: z.string().max(4000).default(""),
+});
+export type DraftPhase = z.infer<typeof phaseSchema>;
+export type DraftCondition = z.infer<typeof conditionSchema>;
+export function newPhase(): DraftPhase {
+  return phaseSchema.parse({ id: "PH-" + crypto.randomUUID(), formula: "" });
+}
+export function phaseName(phase: DraftPhase) {
+  return phase.name.trim() || "Unidentified phase · " + phase.id.slice(-8).toUpperCase();
+}
+export function newCondition(phaseId: string): DraftCondition {
+  return conditionSchema.parse({ id: "PT-" + crypto.randomUUID(), phaseId });
+}
+export function conditionName(condition: DraftCondition) {
+  const p = condition.pressureMode === "unreported" ? "P unreported" : (condition.pressureGPa || "P pending") + " GPa" + (condition.pressureMode === "target" ? " target" : "");
+  const t = condition.temperatureMode === "not-modelled" ? "T not modelled" : condition.temperatureMode === "unreported" ? "T unreported" : (condition.temperatureK || "T pending") + " K";
+  return (condition.label.trim() ? condition.label.trim() + " · " : "") + p + " / " + t;
+}
 export const recordSchema = z.object({
   id: shortText.min(1),
   fileId: shortText.min(1),
   origin: z.enum(["experimental", "theoretical"]),
   dataType: z.enum(["structure", "raman", "xrd", "property", "attachment"]),
+  phaseId: shortText.default(""), conditionId: shortText.default(""),
+  acquisitionLabel: shortText.default(""), acquiredAt: shortText.default(""),
+  instrument: shortText.default(""),
+  pressureMode: z.enum(["reported", "target", "unreported"]).default("reported"),
+  temperatureMode: z.enum(["reported", "not-modelled", "unreported"]).default("reported"),
+  overrideConditions: z.boolean().default(false),
   sampleId: shortText,
   formula: shortText,
   pressureGPa: shortText,
@@ -50,13 +88,13 @@ const fileSchema = z.object({
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
   contentBase64: z.string().max(Math.ceil(batchLimits.fileBytes / 3) * 4),
 });
-export const batchSchema = z
+const graphBatchSchema = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(3),
     kind: z.literal("contribution-batch"),
     status: z.literal("local-draft"),
     id: shortText.min(1),
-    title: shortText.min(1),
+    title: shortText,
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     visibility: z.enum(["private", "public-after-review"]),
@@ -71,14 +109,26 @@ export const batchSchema = z
     }),
     permissionConfirmed: z.boolean(),
     computationRequested: z.boolean(),
+    exampleOnly: z.boolean().default(false),
     manifestText: z
       .string()
       .max(1024 * 1024)
       .default(""),
+    phases: z.array(phaseSchema).max(batchLimits.records),
+    conditions: z.array(conditionSchema).max(batchLimits.records),
     files: z.array(fileSchema).max(batchLimits.files),
     records: z.array(recordSchema).max(batchLimits.records),
   })
   .superRefine((batch, ctx) => {
+    const phaseIds = batch.phases.map(p => p.id), conditionIds = batch.conditions.map(c => c.id);
+    if (new Set(phaseIds).size !== phaseIds.length || new Set(conditionIds).size !== conditionIds.length)
+      ctx.addIssue({ code: "custom", message: "Phase and condition IDs must be unique." });
+    if (batch.conditions.some(c => !phaseIds.includes(c.phaseId)) || batch.records.some(r => !phaseIds.includes(r.phaseId) || !batch.conditions.some(c => c.id === r.conditionId && c.phaseId === r.phaseId)))
+      ctx.addIssue({ code: "custom", message: "Every data record needs a valid Phase → P–T condition association." });
+    for (const c of batch.conditions) {
+      if (c.pressureMode === "unreported" && c.pressureGPa.trim()) ctx.addIssue({code:"custom", message:"Unreported pressure cannot contain a numeric value."});
+      if (c.temperatureMode !== "reported" && c.temperatureK.trim()) ctx.addIssue({code:"custom", message:"Unreported or unmodelled temperature cannot contain a numeric value."});
+    }
     const ids = batch.files.map((f) => f.id);
     if (
       new Set(ids).size !== ids.length ||
@@ -103,8 +153,34 @@ export const batchSchema = z
         code: "custom",
         message: "A record references a missing file.",
       });
+  }).transform(batch => ({ ...batch,
+    exampleOnly: batch.exampleOnly || batch.records.some(record => record.source.trim().startsWith("TUTORIAL ONLY:")),
+    records: batch.records.map(record => {
+    const phase = batch.phases.find(p => p.id === record.phaseId)!;
+    const condition = batch.conditions.find(c => c.id === record.conditionId)!;
+    return { ...record, formula: phase.formula, phaseLabel: phaseName(phase),
+      ...(record.overrideConditions ? {} : { pressureGPa: condition.pressureGPa, temperatureK: condition.temperatureK, pressureMode: condition.pressureMode, temperatureMode: condition.temperatureMode }) };
+  }) }));
+
+/** Old flat drafts gain separate containers per record. Matching labels or P–T never imply a shared phase or acquisition. */
+function upgradeFlatDraft(value: unknown) {
+  if (!value || typeof value !== "object") return value;
+  const v = value as Record<string, unknown>;
+  if (v.schemaVersion !== 2 && !(v.schemaVersion === 3 && Array.isArray(v.records) && v.records.length && !(v.phases as unknown[])?.length && v.records.every(r => r && typeof r === "object" && !r.phaseId && !r.conditionId))) return value;
+  if (!Array.isArray(v.records) || v.records.some(r => !r || typeof r !== "object")) return value;
+  const phases: DraftPhase[] = [], conditions: DraftCondition[] = [];
+  const records = v.records.map((r, index) => {
+    const phase = phaseSchema.parse({ id: `PH-${v.id}-${index + 1}`, name: r.phaseLabel || "", formula: r.formula || "" });
+    const condition = conditionSchema.parse({ id: `PT-${v.id}-${index + 1}`, phaseId: phase.id,
+      pressureGPa: r.pressureGPa || "", pressureMode: r.pressureGPa?.trim() ? "reported" : "unreported",
+      temperatureK: r.temperatureK || "", temperatureMode: r.temperatureK?.trim() ? "reported" : "unreported" });
+    phases.push(phase); conditions.push(condition);
+    return { ...r, phaseId: phase.id, conditionId: condition.id, pressureMode: condition.pressureMode, temperatureMode: condition.temperatureMode };
   });
-export type BatchDraft = z.infer<typeof batchSchema>;
+  return { ...v, schemaVersion: 3, phases, conditions, records };
+}
+export const batchSchema = z.preprocess(upgradeFlatDraft, graphBatchSchema);
+export type BatchDraft = z.output<typeof batchSchema>;
 export type DraftRecord = z.infer<typeof recordSchema>;
 export type DraftFile = z.infer<typeof fileSchema>;
 export type CurveTable = { columns: string[]; rows: string[][] };
@@ -117,7 +193,7 @@ export type FileInspection = {
 export function newBatch(): BatchDraft {
   const now = new Date().toISOString();
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     kind: "contribution-batch",
     status: "local-draft",
     id: crypto.randomUUID(),
@@ -136,7 +212,9 @@ export function newBatch(): BatchDraft {
     },
     permissionConfirmed: false,
     computationRequested: false,
+    exampleOnly: false,
     manifestText: "",
+    phases: [], conditions: [],
     files: [],
     records: [],
   };
@@ -152,6 +230,8 @@ export function defaultRecord(
     fileId,
     origin,
     dataType,
+    phaseId: "", conditionId: "", acquisitionLabel: "", acquiredAt: "", instrument: "",
+    pressureMode: "reported", temperatureMode: "reported", overrideConditions: false,
     sampleId: "",
     formula: "",
     pressureGPa: "",
@@ -369,7 +449,7 @@ export function recordIssues(
   records: DraftRecord[],
 ): string[] {
   const issues: string[] = [];
-  if (!record.sampleId.trim()) issues.push("Add a sample ID.");
+  if (!record.phaseId && !record.sampleId.trim()) issues.push("Add a sample ID.");
   try {
     if (!record.formula.trim()) throw new Error();
     normalizeSearch(record.formula, "formula");
@@ -385,8 +465,8 @@ export function recordIssues(
         : "Describe the original calculation method.",
     );
   if (
-    record.pressureGPa.trim() === "" ||
-    !Number.isFinite(Number(record.pressureGPa))
+    record.pressureMode !== "unreported" && (record.pressureGPa.trim() === "" ||
+    !Number.isFinite(Number(record.pressureGPa)))
   )
     issues.push("Add the actual pressure in GPa.");
   if (
@@ -395,8 +475,12 @@ export function recordIssues(
       Number(record.temperatureK) < 0)
   )
     issues.push("Temperature must be a nonnegative value in K.");
-  if (record.origin === "experimental" && !record.temperatureK.trim())
+  if (record.origin === "experimental" && record.temperatureMode === "not-modelled") issues.push("Experimental temperature must be reported or explicitly unreported.");
+  if (record.temperatureMode === "reported" && !record.temperatureK.trim() && (record.origin === "experimental" || Boolean(record.phaseId)))
     issues.push("Add the measurement temperature in K.");
+  if (record.origin === "experimental" && record.pressureMode === "target") issues.push("Experimental records need reported or explicitly unreported pressure, not a calculation target.");
+  if (record.pressureMode === "unreported" && record.pressureGPa.trim()) issues.push("Unreported pressure cannot contain a value.");
+  if (record.temperatureMode !== "reported" && record.temperatureK.trim()) issues.push("Unreported or unmodelled temperature cannot contain a value.");
   if (record.dataType === "structure") {
     if (!inspection.structureChecks)
       issues.push(inspection.error ?? "Choose a CIF or POSCAR structure file.");
@@ -429,7 +513,9 @@ export function recordIssues(
     const linked = records.find((r) => r.id === record.structureRecordId);
     if (!linked || linked.dataType !== "structure" || linked.id === record.id)
       issues.push("The linked structure record is unavailable.");
-    else if (linked.sampleId !== record.sampleId)
+    else if (record.phaseId && (linked.phaseId !== record.phaseId || linked.conditionId !== record.conditionId))
+      issues.push("Link the exact structure from this Phase and condition group.");
+    else if (linked.sampleId !== record.sampleId && record.sampleId && linked.sampleId)
       issues.push("Linked records need the same declared sample ID.");
   }
   if (!file.size) issues.push("The original file is empty.");
@@ -439,6 +525,7 @@ export function batchReadiness(
   batch: BatchDraft,
   inspections: Record<string, FileInspection>,
 ) {
+  batch = batchSchema.parse(batch);
   const byFile = new Map(batch.files.map((f) => [f.id, f]));
   const issues = Object.fromEntries(
     batch.records.map((r) => [
@@ -452,6 +539,8 @@ export function batchReadiness(
     ]),
   );
   const batchIssues: string[] = [];
+  if (!batch.title.trim()) batchIssues.push("Add a submission title before review.");
+  if (batch.exampleOnly) batchIssues.push("Teaching examples cannot be saved or submitted as research data.");
   if (!batch.contributor.name.trim())
     batchIssues.push("Add the contributor name.");
   if (!z.string().email().safeParse(batch.contributor.email).success)
@@ -462,6 +551,12 @@ export function batchReadiness(
     );
   if (!batch.records.length)
     batchIssues.push("Add at least one scientific record.");
+  for (const phase of batch.phases) {
+    if (!batch.records.some(r=>r.phaseId===phase.id)) batchIssues.push("Remove empty phase " + phaseName(phase) + " or add data.");
+    if (phase.identification !== "unassigned" && !phase.evidence.trim()) {
+      batchIssues.push("Add identification evidence for " + phaseName(phase) + ".");
+    }
+  }
   return {
     issues,
     batchIssues,
@@ -473,6 +568,9 @@ export const manifestColumns = [
   "file",
   "origin",
   "data_type",
+  "phase_key", "condition_key", "phase_name", "phase_status", "phase_evidence",
+  "pressure_mode", "temperature_mode", "condition_label", "condition_path", "condition_notes",
+  "acquisition_label", "acquired_at", "instrument", "feed_composition", "measured_composition",
   "sample_id",
   "formula",
   "pressure_gpa",
@@ -623,15 +721,54 @@ export async function importBatchDraft(value: unknown): Promise<BatchDraft> {
       ],
     };
   } else batch = batchSchema.parse(value);
+  batch = batchSchema.parse(batch);
   for (const file of batch.files) {
     safePath(file.path);
     if ((await hashBytes(fileBytes(file))) !== file.sha256)
       throw new Error("Original file checksum mismatch: " + file.path);
   }
+  const phaseIds = new Map(batch.phases.map(p => [p.id, "PH-" + crypto.randomUUID()]));
+  const conditionIds = new Map(batch.conditions.map(c => [c.id, "PT-" + crypto.randomUUID()]));
   return batchSchema.parse({
     ...batch,
+    phases: batch.phases.map(p => ({...p, id: phaseIds.get(p.id)!})),
+    conditions: batch.conditions.map(c => ({...c, id: conditionIds.get(c.id)!, phaseId: phaseIds.get(c.phaseId)!})),
+    records: batch.records.map(r => ({...r, phaseId: phaseIds.get(r.phaseId)!, conditionId: conditionIds.get(r.conditionId)!})),
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
+}
+
+/** Explicit keys group acquisitions; empty keys use one conservative container per record. Conflicting shared metadata is rejected. */
+export function applyGroupedManifest(text: string, files: DraftFile[], batch: BatchDraft): BatchDraft {
+  const records = applyManifest(text, files);
+  const rows = parseDelimited(text), headings = rows.shift()!.map(h => h.toLowerCase());
+  const entries = rows.map(row => Object.fromEntries(headings.map((h,i) => [h,row[i]])));
+  const phases = new Map<string, DraftPhase>(), conditions = new Map<string, DraftCondition>();
+  const phaseValues = new Map<string, Record<string,string>>(), conditionValues = new Map<string, Record<string,string>>();
+  function shared(store: Map<string, Record<string,string>>, key: string, values: Record<string,string>) {
+    const previous = store.get(key) ?? {};
+    for (const [field,value] of Object.entries(values)) if (value.trim()) {
+      if (previous[field] && previous[field] !== value) throw new Error(`Conflicting ${field} for ${key}. Use distinct keys for distinct phases or condition groups.`);
+      previous[field] = value;
+    }
+    store.set(key,previous); return previous;
+  }
+  const linked = records.map((r,i) => {
+    const e = entries[i], pk = e.phase_key?.trim() || "record:" + r.id;
+    shared(phaseValues, pk, { formula:e.formula ?? "", name:e.phase_name || e.phase_label || "", identification:e.phase_status ?? "", evidence:e.phase_evidence ?? "", feedComposition:e.feed_composition ?? "", measuredComposition:e.measured_composition ?? "" });
+    if (!phases.has(pk)) phases.set(pk, newPhase());
+    const phase = phases.get(pk)!;
+    const ck = JSON.stringify([pk,e.condition_key?.trim() || "record:" + r.id]);
+    shared(conditionValues,ck,{ label:e.condition_label ?? "", pressureGPa:e.pressure_gpa ?? "", temperatureK:e.temperature_k ?? "", pressureMode:e.pressure_mode ?? "", temperatureMode:e.temperature_mode ?? "", path:e.condition_path ?? "", notes:e.condition_notes ?? "" });
+    if (!conditions.has(ck)) conditions.set(ck,newCondition(phase.id));
+    return { ...r, phaseId:phase.id, conditionId:conditions.get(ck)!.id, acquisitionLabel:e.acquisition_label ?? "", acquiredAt:e.acquired_at ?? "", instrument:e.instrument ?? "" };
+  });
+  const nextPhases = [...phases].map(([key,phase]) => phaseSchema.parse({...phase,...phaseValues.get(key)}));
+  const nextConditions = [...conditions].map(([key,condition]) => {
+    const v = conditionValues.get(key)!;
+    return conditionSchema.parse({...condition,...v, pressureMode:v.pressureMode || (v.pressureGPa ? "reported":"unreported"), temperatureMode:v.temperatureMode || (v.temperatureK ? "reported":"unreported")});
+  });
+  return batchSchema.parse({...batch, schemaVersion:3, files, phases:nextPhases, conditions:nextConditions, records:linked, manifestText:text});
 }

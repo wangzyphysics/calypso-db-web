@@ -167,3 +167,7 @@ Public home/about/docs; sign-in required for exploration and contribution worksp
 `/signup` collects a username, email, password with confirmation, full name, institution, research group and career stage before registration, then returns to the original destination. Local test registration creates an unverified private member on this device; use Account on `/login` with the same username/email and password to return. Local passwords are salted PBKDF2 checks, never plaintext; only fictitious test details should be used. Real email/SMS registration and third-party signup require the identity backend; the frontend does not send messages or verify real identities itself.
 
 Administrator statistics and card/list discovery results: [operation guide](docs/STATISTICS_AND_RESULTS.md). Administrator entry: `/admin`; local read-only aggregate command: `npm --prefix ../materials-backend-lab run platform:stats` when run from this frontend directory.
+
+## Phase-based contributions (2026-10-14)
+
+Contribution drafts now use Phase → P–T condition → experimental/theoretical data records, with optional structures, explicit unknown conditions and grouped CSV/ZIP imports. The graph persists in PostgreSQL and appears in personal batches and reviewer views. Legacy drafts remain readable; importing a copy remaps identities. See [contribution model and current limits](docs/CONTRIBUTIONS.md) and [validation](docs/VALIDATION.md).

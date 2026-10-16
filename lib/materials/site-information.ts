@@ -11,6 +11,34 @@ export function contactHref(
 }
 export const platformUpdates = [
   {
+    date: "2026-10-16",
+    title: "Reliable contribution drafts and original-file handling",
+    changes: [
+      "Saved submissions reopen after refresh with their selected condition and record; metadata-only drafts can be saved.",
+      "Shared originals can be reused across conditions; same-name files with different bytes are kept separately.",
+      "All-record visibility, explicit submission-title guidance and reversible draft removal with confirmation for populated groups.",
+    ],
+  },
+  {
+    date: "2026-10-14",
+    title: "Contribution examples and upload tutorial",
+    changes: [
+      "On-demand teaching examples for structures, spectra, numerical properties and mixed batches.",
+      "Example preview restores the original draft; marked teaching data cannot be saved or submitted.",
+      "Documentation links each category to its form example and explains scalar CSV, repeated acquisitions and batch manifests.",
+    ],
+  },
+  {
+    date: "2026-10-14",
+    title: "Phase-based scientific contributions",
+    changes: [
+      "Phase → P–T condition → data cards, with experimental/theoretical labels on each record.",
+      "Persistent Phase IDs, generated unidentified names and separate identification evidence.",
+      "Explicit unknown/target conditions, shared-file acquisitions and grouped CSV/ZIP import.",
+      "Database-backed hierarchy in personal batches and administrator review; legacy drafts remain readable.",
+    ],
+  },
+  {
     date: "2026-10-14",
     title: "Discovery controls and account management refinements",
     changes: [

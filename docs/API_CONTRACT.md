@@ -4,6 +4,10 @@
 
 This document defines the frontend integration contract. A loopback PostgreSQL service now implements materials/statistics and bounded previews, with explicit unavailable scientific features. The application has no dependency on the original CALYPSO site.
 
+### Contribution teaching examples (2026-10-14, v14)
+
+Static `/upload-examples/examples-v1.json` and `teaching-data.zip` contain only synthetic teaching data; they are not material API records. Contribution v3 accepts an additive `exampleOnly: boolean` (default false). The shared parser also sets it when a record source begins with the known `TUTORIAL ONLY:` marker. `PUT /contributions/batches/:id` rejects these drafts with HTTP 400 before file verification or a database transaction. Browser-only persistence rejects them too, and submission readiness includes a blocking teaching-data error. Regular v1/v2/v3 research drafts remain compatible. These protections prevent accidental submission of supplied examples, not arbitrary scientific fraud.
+
 Configure `NEXT_PUBLIC_MATERIALS_API_BASE` to an HTTP(S) base URL or same-origin path. Responses are plain JSON; transport-specific envelopes should be normalized in `lib/materials/api.ts` when the actual backend contract is agreed.
 
 ## GET /statistics
@@ -123,16 +127,24 @@ community?: {
 
 This is an interface reservation only: the frontend does not collect IP addresses, infer location, store analytics or fabricate user counts. The base map remains neutral when aggregates are absent. Counts for CALYPSO software adoption or other websites must never be used as this database's registered-user total.
 
-## Batch contributions and owner workspace (v7)
+## Phase-based contributions (v13 / draft schema v3)
 
-`/contribute` now prepares experimental and theoretical batches, multiple files/ZIP, explicit CSV mappings, raw attachments, and private/public-after-review intent. `/workspace` lists saved local drafts in this browser. These routes make no contribution API requests and do not publish, review or run calculations.
+The active local PostgreSQL service supports contribution drafts, original files, submission, whole-batch review, privacy and recoverable archive. `/contribute` organizes Phase → P–T condition → data cards; `/workspace` and administrator review display the same graph. The browser-only fallback remains account scoped.
 
-The v2 JSON schema and local checks are implemented in `lib/materials/batch-contribution.ts`. Saving persists original file bytes and metadata in same-origin IndexedDB; export contains base64 original bytes with SHA-256 checksums. Import checks those bytes and creates a new local batch identity. Legacy v1 single-structure exports migrate conservatively to private visibility with independent permission confirmation. Local persistence is not authenticated account storage.
+A v3 draft contains `phases[]`, `conditions[]`, `records[]` and `files[]`. Phase has a permanent contribution ID, optional name, formula, contributor identification status/evidence and optional feed/measured composition. Condition has its own ID and phaseId, explicit pressure/temperature definitions, values, path and notes. Record references phaseId / conditionId, stores its own origin/type, acquisition metadata, optional exact structure link and explicit condition overrides. Original files remain separately hashed byte streams. Legacy flat formula/name/P–T fields are authoritative projections from the graph, except explicitly enabled record-specific conditions.
 
-[Contribution and workflow design](CONTRIBUTIONS.md) documents file limits, manifest columns, privacy, review/publication/computation/quality/ingestion states, the proposed authenticated upload interfaces, and the server-side adapter for the user's existing VASP scripts. TypeScript request/response contracts are reserved in `lib/materials/contribution-contract.ts`. The scientific protocol, numerical settings and actual script sequence are not invented by the frontend.
+The same-origin routes remain `GET /batches`, `GET/PUT /batches/:id`, `POST /batches/:id/submit`, `GET /batches/:id/events`, `GET /batches/:id/files/:fileId`, `DELETE /batches/:id` (recoverable archive), `POST /batches/:id/restore`, `GET /admin/review`, `PATCH /admin/review/:id`. Owner comes from the authenticated session; writes retain Origin/CSRF checks and expectedUpdatedAt conflict detection. Review envelopes add phases/conditions, with absent arrays accepted for legacy responses.
 
-All future public query/preview/statistics implementations must exclude private submissions and private calculated outputs on the server. Explicit public intent plus record-level approval is required before a contribution becomes eligible for public indexing. Calculation completion and ingestion do not change visibility.
+Server validation checks graph references, original hashes, conditions and scientific context before submission. New Phase/condition identities are protected by PostgreSQL keys and batch-scoped foreign keys. Draft saving remains allowed before context is complete. Legacy v2 reads conservatively create separate containers per record; importing an exported draft as a copy remaps all graph identities and preserves files/record associations.
+
+Explicit public intent and batch approval are required for shared indexing. Target calculation pressure is not reported pressure. Contributor Phase IDs may organize results without confirming phase identity or stability; scientific homepage counts remain defined by the imported source dataset. Phase assignment, review, publication, calculation and ingestion remain independent. VASP execution, canonical cross-batch phase linkage and per-record partial review are not implemented.
+
+[Contribution design](CONTRIBUTIONS.md) specifies fields, CSV/ZIP grouping, migration and boundaries. The broader future workflow request/response reservations in `lib/materials/contribution-contract.ts` do not imply an active worker.
 
 ## Authentication and ownership (v8)
 
 See [AUTHENTICATION.md](AUTHENTICATION.md) and `lib/accounts/client.ts` for the same-origin identity BFF contract. The UI sign-in gate is not server authorization: the materials API must enforce sessions on every search and protected record/download request. Contribution ownerId must come from the server session; explicit contributor profile snapshots do not confer ownership. Local browser drafts now use mode/user-scoped IndexedDB keys, preserving pre-account drafts for explicit copying.
+
+## Contribution draft recovery (2026-10-16, v15)
+
+PUT/read draft persistence supports zero scientific records and original files; submission still rejects an empty/incomplete batch. Draft titles may be empty while editing; the client normalizes a blank saved title to Untitled contribution. No table or endpoint migration is required. Saved frontend URLs carry draft/condition/record identifiers; all server ownership, CSRF and optimistic-version checks remain in force. File path uniqueness is preserved: ordinary uploads resolve byte-identical same-path repeats by sharing the existing file ID, while distinct bytes get an explicit unique path. Manifest imports never silently redirect ambiguous references. Deletions remove graph references and retain shared files until their final record is removed; they persist only on save.

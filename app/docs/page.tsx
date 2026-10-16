@@ -1,3 +1,4 @@
+import { ContributionGuide } from "@/components/materials/contribution-guide";
 import type { Metadata } from "next";
 import { ScrollRevealPage } from "@/components/materials/scroll-reveal-page";
 import Link from "next/link";
@@ -84,9 +85,9 @@ export default function DocumentationPage() {
                 <span className="publication-status">To be published</span>
               </div>
               <p>
-                No materials dataset has been connected yet. Dataset origin,
-                contributor attribution, calculation provenance and release
-                coverage will be documented here when confirmed.
+                Materials retain their source identifiers and contributor attribution.
+                Dataset-wide provenance, calculation protocols and release
+                coverage will be documented here when verified.
               </p>
               <article className="reference-source">
                 <BookOpen size={20} />
@@ -129,80 +130,7 @@ export default function DocumentationPage() {
                 <ArrowRight size={15} />
               </Link>
             </section>
-            <section
-              id="contribution-guide"
-              className="knowledge-section"
-              data-reveal
-            >
-              <div className="knowledge-section-heading">
-                <BookOpen size={23} />
-                <h2>Contribution guide</h2>
-              </div>
-              <p>
-                Prepare experimental spectra, physical-property curves or
-                theoretical structures as one batch. Multiple files and ordinary
-                ZIP archives are supported; original instrument files and images
-                are retained as attachments.
-              </p>
-              <h3>Files, records and conditions</h3>
-              <p>
-                Use the downloadable CSV manifest to associate a file with a
-                record ID, sample ID, formula, pressure in GPa, temperature in
-                K, method and source. Include all files, using the attachment
-                data type for unparsed originals. Phase assignment and structure
-                association are optional; neither is inferred from filenames or
-                composition.
-              </p>
-              <p>
-                One original table may supply multiple curve records. Repeat its
-                file path with distinct record IDs and choose X/Y columns by
-                header name or zero-based index. Each curve keeps its own
-                pressure, temperature, coordinate quantities, units and
-                processing state. Raw and derived curves remain separately
-                identified.
-              </p>
-              <p className="knowledge-note">
-                Numeric previews accept CSV, TXT, TSV and XY, with up to 10,000
-                points and 64 columns. No smoothing, fitting or structure
-                interpolation is applied. ZIP import supports stored/deflated
-                files with UTF-8 or ASCII paths; encrypted, multipart and ZIP64
-                archives are unsupported.
-              </p>
-              <h3>Visibility and processing</h3>
-              <p>
-                New drafts default to private. A public-after-review selection
-                records the contributor's intent: only approved, explicitly
-                public records may enter public search. Private records, files,
-                logs and metadata require owner or authorized-reviewer access.
-                Processing authorization is separate and never makes private
-                data public.
-              </p>
-              <p>
-                Public theoretical contributions awaiting platform
-                standardization will use a red star with text explaining their
-                status. Experimental contributions retain their measurement
-                origin. Approval, publication, VASP calculation, quality checks
-                and standardized ingestion have independent states.
-              </p>
-              <h3>Local drafts and future workflows</h3>
-              <p>
-                Saving stores the batch in this browser's IndexedDB. JSON export
-                includes original file bytes, SHA-256 checksums and scientific
-                context. Import verifies checksums; earlier single-structure
-                JSON drafts can also be opened. Browser data clearing may remove
-                local drafts, so retain an exported copy.
-              </p>
-              <p>
-                Account, submission, review and workflow services are not
-                connected. The personal workspace shows saved drafts and honest
-                not-submitted states. The VASP adapter will report real stage
-                and attempt events; percentages describe completed required
-                steps, not elapsed-time predictions or SCF-iteration ratios.
-              </p>
-              <Link href="/contribute" className="text-link">
-                Prepare a batch <ArrowRight size={15} />
-              </Link>
-            </section>
+            <ContributionGuide />
             <section id="updates" className="knowledge-section">
               <div className="knowledge-section-heading" data-reveal>
                 <History size={23} />

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { identityClient, IdentityError } from "../accounts/client.ts";
-import { batchSchema, recordSchema, type BatchDraft } from "./batch-contribution.ts";
+import { batchSchema, recordSchema, phaseSchema, conditionSchema, type BatchDraft } from "./batch-contribution.ts";
 
 export const batchStateSchema = z.object({
   id: z.string(), title: z.string(), ownerId: z.string(),
@@ -43,7 +43,7 @@ export const contributionApi = {
   archive: (id: string) => request(batchPath(id), z.object({ ok: z.literal(true) }), "DELETE"),
   restore: (id: string) => request(batchPath(id) + "/restore", z.object({ ok: z.literal(true) }), "POST", {}),
   events: (id: string) => request(batchPath(id) + "/events", z.object({ state: batchStateSchema, events: z.array(z.object({ sequence: z.string(), type: z.string(), detail: z.record(z.unknown()), occurredAt: z.string().datetime() })) })),
-  reviewQueue: () => request("/admin/review", z.object({ items: z.array(z.object({ state: batchStateSchema, title: z.string(), contributor: z.object({ name: z.string(), email: z.string() }).passthrough(), visibility: z.string(), records: z.array(recordSchema), files: z.array(z.object({ id: z.string(), path: z.string(), size: z.number(), sha256: z.string() })) })) })),
+  reviewQueue: () => request("/admin/review", z.object({ items: z.array(z.object({ state: batchStateSchema, title: z.string(), contributor: z.object({ name: z.string(), email: z.string() }).passthrough(), visibility: z.string(), phases: z.array(phaseSchema).default([]), conditions: z.array(conditionSchema).default([]), records: z.array(recordSchema), files: z.array(z.object({ id: z.string(), path: z.string(), size: z.number(), sha256: z.string() })) })) })),
   review: (state: BatchState, status: "approved" | "rejected" | "needs-information", notes: string) => request("/admin/review/" + encodeURIComponent(state.id), batchStateSchema, "PATCH", { status, notes, expectedUpdatedAt: state.updatedAt }),
   fileHref: (id: string, fileId: string) => base + batchPath(id) + "/files/" + encodeURIComponent(fileId),
 };
