@@ -23,6 +23,7 @@ const sections = [
   ["methods", "Calculation methods"],
   ["sources", "Data sources"],
   ["citation", "Citation & reuse"],
+  ["structure-records", "Structure records"],
   ["contribution-guide", "Contribution guide"],
   ["updates", "Updates"],
 ];
@@ -129,6 +130,13 @@ export default function DocumentationPage() {
                 Preparing a contribution? Include its source.{" "}
                 <ArrowRight size={15} />
               </Link>
+            </section>
+            <section id="structure-records" className="knowledge-section" data-reveal>
+              <div className="knowledge-section-heading"><Database size={23}/><h2>Reading a structure record</h2></div>
+              <p>Open a formula or “View record” from search results. Rotate or zoom the crystal, select a stored cell representation, and switch between fractional and Cartesian coordinates. The display cell and a calculation output can have different site counts and volumes.</p>
+              <p>Source phase links open exact available pressure records. A phase label does not establish stability. Each source energy refers to its calculation cell and retains its validation status; unreported pressure and temperature remain unreported.</p>
+              <p>CIF exports contain the full selected cell in a P1 representation, which does not replace the source symmetry assignment. POSCAR export is available for fully occupied, ordered sites. Record JSON includes cell geometries and task summaries. Contributed spectra retain their original values, axes and ordering; private data remain restricted.</p>
+              <Link href="/explore" className="text-link">Explore structure records <ArrowRight size={15}/></Link>
             </section>
             <ContributionGuide />
             <section id="updates" className="knowledge-section">

@@ -1,16 +1,20 @@
 "use client";
 import { ArrowDown, ArrowUp, ChevronsUpDown, RotateCcw } from "lucide-react";
-import { useEffect, useRef, useState, type PointerEvent, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type KeyboardEvent } from "react";
 import { recordColumns, defaultColumns, columnLimits, fitColumnWidths, resizeColumn, type RecordColumn, type ColumnWidths } from "@/lib/materials/table-columns";
 export { recordColumns, defaultColumns, type RecordColumn } from "@/lib/materials/table-columns";
 import type { MaterialRecord } from "@/lib/materials/api";
 import { ChemicalFormula } from "./foundations";
+import Link from "next/link";
+import { detailHref } from "@/lib/materials/detail";
 
 export function RecordTable({ records, columns = defaultColumns, sort, onSort, widths: savedWidths, onWidthsChange }: { records: MaterialRecord[]; columns?: RecordColumn[]; sort?: string; onSort?: (sort: string) => void; widths?: ColumnWidths; onWidthsChange?: (widths: ColumnWidths) => void }) {
   const scroll = useRef<HTMLDivElement>(null);
   const [localWidths, setLocalWidths] = useState(() => fitColumnWidths(columns, 0));
   const widths = savedWidths ?? localWidths;
-  const latestWidths = useRef(widths); latestWidths.current = widths;
+  const latestWidths = useRef(widths);
+  const hasSavedWidths = savedWidths !== undefined;
+  useLayoutEffect(() => { latestWidths.current = widths; }, [widths]);
   const drag = useRef<{ x: number; widths: ColumnWidths; left: RecordColumn; handle: HTMLDivElement } | null>(null);
   function updateWidths(next: ColumnWidths) { latestWidths.current = next; setLocalWidths(next); onWidthsChange?.(next); }
   function finishDrag() { drag.current?.handle.classList.remove("dragging"); drag.current = null; }
@@ -19,14 +23,14 @@ export function RecordTable({ records, columns = defaultColumns, sort, onSort, w
     let available: number | null = null;
     const observer = new ResizeObserver(() => {
       if (available === container.clientWidth) return;
-      const keepSaved = available === null && savedWidths;
+      const keepSaved = available === null && hasSavedWidths;
       available = container.clientWidth;
       const next = keepSaved ? latestWidths.current : fitColumnWidths(columns, available, latestWidths.current);
       latestWidths.current = next; setLocalWidths(next); onWidthsChange?.(next);
     });
     observer.observe(container);
     return () => { observer.disconnect(); finishDrag(); };
-  }, [columns, onWidthsChange]);
+  }, [columns, onWidthsChange, hasSavedWidths]);
   function startResize(event: PointerEvent<HTMLDivElement>, left: RecordColumn) {
     if (event.button !== 0) return;
     event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
@@ -45,13 +49,13 @@ export function RecordTable({ records, columns = defaultColumns, sort, onSort, w
   }
   const sortable = { formula: "formula_asc", pressure: sort === "pressure_asc" ? "pressure_desc" : "pressure_asc", symmetry: "space_group_asc" };
   function cell(record: MaterialRecord, column: RecordColumn) {
-    if (column === "formula") return <><strong className="table-formula"><ChemicalFormula formula={record.formula} /></strong><small className="table-material-id" title={record.materialId}>{record.externalIds?.[0] ?? record.materialId}</small></>;
+    if (column === "formula") return <><strong className="table-formula"><Link href={detailHref(record.recordId)}><ChemicalFormula formula={record.formula} /></Link></strong><small className="table-material-id" title={record.materialId}>{record.externalIds?.[0] ?? record.materialId}</small></>;
     if (column === "pressure") return record.pressureGPa == null ? <span className="table-unknown">Not reported</span> : <span className="table-pressure">{record.pressureGPa}</span>;
     if (column === "phase") return <span title={record.phaseId ?? undefined}>{record.phaseLabel ?? "Unassigned"}</span>;
     if (column === "symmetry") return record.spaceGroup ?? "—";
     if (column === "crystal") return record.crystalSystem ?? "—";
-    if (column === "record") return <span className="table-record-id" title={record.recordId}>{record.recordId}</span>;
-    return record.provenance === "contributed" ? <span className="table-contribution"><b aria-hidden="true">★</b> Contribution<small>{record.dataType} · original data</small></span> : <span className="table-imported">Imported</span>;
+    if (column === "record") return <Link href={detailHref(record.recordId)} className="table-record-id" title={record.recordId}>{record.recordId}</Link>;
+    return record.provenance === "contributed" ? <span className="table-contribution">{record.origin === "theoretical" && <b aria-hidden="true">★</b>} Contribution<small>{record.origin ?? "Origin unreported"} · {record.dataType}</small></span> : <span className="table-imported">Imported</span>;
   }
   const totalWidth = columns.reduce((sum, column) => sum + widths[column], 0);
   return <div className="record-table-region">

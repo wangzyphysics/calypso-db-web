@@ -118,6 +118,8 @@ export function Homepage() {
               revealStep={0}
               title="Crystal Structures"
               description="Explore lattice geometry, atomic positions and crystal symmetry."
+              href="/explore"
+              action="Explore structure records →"
             />
             <FeatureCard
               icon={Network}

@@ -173,7 +173,7 @@ export function safeReturnTo(value: string | null | undefined) {
     const url = new URL(value, "https://calypso.invalid");
     if (
       url.origin !== "https://calypso.invalid" ||
-      ![
+      !/^\/materials\/[A-Za-z0-9_-]{1,200}$/.test(url.pathname) && ![
         "/",
         "/explore",
         "/contribute",

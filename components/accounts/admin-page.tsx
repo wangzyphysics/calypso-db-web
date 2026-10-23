@@ -1,6 +1,7 @@
 "use client";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Check, ShieldCheck, RefreshCw } from "lucide-react";
+import { Check, RefreshCw } from "lucide-react";
 import { useAuth } from "./auth-context";
 import { AccountNavigation, TestModeNotice } from "./account-navigation";
 import { Container } from "@/components/materials/foundations";
@@ -10,11 +11,15 @@ import { changeTestRole, listTestUsers } from "@/lib/accounts/local-test";
 import { type AccountUser, type RoleAudit, type AccountAudit } from "@/lib/accounts/model";
 import { AdminStatistics } from "./admin-statistics";
 import { AdminAccountEditor } from "./admin-account-editor";
+import { DataImports } from "./data-imports";
 import { ContributionReview } from "./contribution-review";
 import { contributionsConfigured } from "@/lib/materials/contributions-api";
 export function AdminPage() {
   const auth = useAuth();
-  const [section, setSection] = useState<"overview" | "accounts" | "review" | "audit">("overview");
+  const params = useSearchParams(), router = useRouter();
+  const requestedSection = params.get("section") || "overview";
+  const section = ["overview", "accounts", "review", "imports", "audit"].includes(requestedSection) ? requestedSection : "overview";
+  const setSection = (value: string) => router.replace("/admin?section=" + value, { scroll: false });
   const [statusFilter, setStatusFilter] = useState("all"), [showDemo, setShowDemo] = useState(false), [userPage, setUserPage] = useState(1);
   const [users, setUsers] = useState<AccountUser[]>([]),
     [audit, setAudit] = useState<RoleAudit[]>([]);
@@ -45,7 +50,9 @@ export function AdminPage() {
     }
   }
   useEffect(() => {
-    void refresh();
+    let current = true;
+    queueMicrotask(() => { if (current) void refresh(); });
+    return () => { current = false; };
   }, [auth.mode, auth.user?.id]);
   const filteredUsers = users.filter(user => Boolean(user.demoAccount) === showDemo && (statusFilter === "all" || (user.status ?? "active") === statusFilter) && [user.username, user.email, user.profile.displayName, user.profile.institution].some(value => value?.toLowerCase().includes(query.trim().toLowerCase())));
   const shownUsers = filteredUsers.slice((userPage - 1) * 15, userPage * 15);
@@ -88,7 +95,7 @@ export function AdminPage() {
         </header>
         <AccountNavigation active="admin" />
         <TestModeNotice />
-        <div className="admin-section-navigation" role="tablist" aria-label="Administration sections">{([['overview','Overview'],['accounts','Accounts'],['review','Contribution review'],['audit','Audit log']] as const).map(([value,label]) => <button key={value} type="button" role="tab" aria-selected={section === value} aria-controls={`admin-${value}-panel`} onClick={() => { setSection(value); setPending(null); setManaged(null); }}>{label}{value === 'accounts' && <span>{users.filter(user => !user.demoAccount).length}</span>}</button>)}</div>
+        <div className="admin-section-navigation" role="tablist" aria-label="Administration sections">{([['overview','Overview'],['accounts','Accounts'],['review','Contribution review'],['imports','Data imports'],['audit','Audit log']] as const).map(([value,label]) => <button key={value} type="button" role="tab" aria-selected={section === value} aria-controls={`admin-${value}-panel`} onClick={() => { setSection(value); setPending(null); setManaged(null); }}>{label}{value === 'accounts' && <span>{users.filter(user => !user.demoAccount).length}</span>}</button>)}</div>
         {section === "overview" && <div role="tabpanel" id="admin-overview-panel" aria-label="Overview">{auth.mode === "service" && <AdminStatistics />}</div>}
         {section === "accounts" && <div role="tabpanel" id="admin-accounts-panel" aria-label="Accounts">
         <section className="account-panel" id="accounts">
@@ -199,6 +206,7 @@ export function AdminPage() {
             <p>No role changes yet.</p>
           )}
         </section>}
+        {section === "imports" && <div role="tabpanel" id="admin-imports-panel">{auth.mode === "service" && contributionsConfigured ? <DataImports /> : <section className="account-panel"><h2>Data imports</h2><p>Connect the database account and contribution APIs to import real data.</p></section>}</div>}
         {section === "review" && <div role="tabpanel" id="admin-review-panel">{auth.mode === "service" && contributionsConfigured && <ContributionReview />}</div>}
       </Container>
     </ScrollRevealPage>

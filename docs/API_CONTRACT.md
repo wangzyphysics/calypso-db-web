@@ -74,7 +74,7 @@ interface MaterialsResponse {
 
 “Recently Added Materials” is used only if the backend declares `created_desc` and every returned record has a valid, non-increasing creation timestamp. Otherwise the section remains “Explore Materials”. No stable-phase selection, formula-based merging, structural interpolation, or deduplication of scientifically distinct records is performed.
 
-Material detail navigation is reserved for a later phase and is intentionally not active on preview cards. Add it only when real independent detail routes exist.
+As of v17 (2026-10-18), preview cards and tables open `/materials/:recordId`. Authenticated `GET /records/:id` and `/records/:id/download` are implemented by the independent PostgreSQL API. See [structure detail contract and export conventions](STRUCTURE_DETAILS.md).
 
 ## Loading and failures
 

@@ -40,11 +40,12 @@ function NavigationLinks({ close = false }: { close?: boolean }) {
     { href: "/about", label: "About" },
   ];
   const renderLink = ({ href, label }: (typeof links)[number]) => {
+    const active = pathname === href || (href === "/explore" && pathname.startsWith("/materials/"));
     const link = (
       <Link
-        className={pathname === href ? "nav-link active" : "nav-link"}
+        className={active ? "nav-link active" : "nav-link"}
         href={href}
-        aria-current={pathname === href ? "page" : undefined}
+        aria-current={active ? "page" : undefined}
       >
         {label}
       </Link>

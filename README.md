@@ -1,8 +1,12 @@
-# CALYPSO Materials — Phase 1
+# CALYPSO Materials
 
 An independent frontend for a pressure-oriented materials research platform. The original CALYPSO website was a reference only. This application does not use its routes, API, authentication, data, or scientific modules.
 
 The workspace was initially empty. Following the confirmed scope, this project establishes a new homepage, navigation, discovery entry points, and shared design system. The local website now connects to the adjacent materials-backend-lab PostgreSQL database. No mock scientific backend is used.
+
+## Structure records — 2026-10-18
+
+Search cards and tables now open real authenticated details at `/materials/:recordId`: interactive crystal geometry, distinct display/calculation cells, coordinate tables, exact source-phase pressure records, source tasks/provenance and authorized CIF/POSCAR/CSV/JSON exports. Contributor records retain their visibility and original observations. See [scope, API and scientific boundaries](docs/STRUCTURE_DETAILS.md).
 
 ## Registration and administration — 2026-10-12
 
@@ -35,7 +39,7 @@ npm run build
 
 ## Stack and structure
 
-React 19.2, TypeScript 5.9, Vinext 1.0.0-beta.5 / Vite 8, Tailwind 4. Existing starter primitives provide accessible controls, the mobile navigation sheet, select menu, empty states, and skeletons. Lucide provides lightweight scientific icons. No crystal viewer or charting library is used by the Phase 1 product.
+React 19.2, TypeScript 5.9, Vinext 1.0.0-beta.5 / Vite 8, Tailwind 4. Existing starter primitives provide accessible controls, the mobile navigation sheet, select menu, empty states, and skeletons. Lucide provides lightweight scientific icons. Structure pages use a lightweight native SVG crystal viewer; no 3D dependency was added.
 
 | Surface                              | Files                                                                                                                                                                        |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -63,7 +67,7 @@ React 19.2, TypeScript 5.9, Vinext 1.0.0-beta.5 / Vite 8, Tailwind 4. Existing s
 - All 118 elements, scientifically ordered, with selected states, removal, reset, and arrow-key navigation. A short hover dwell previews a reference without requiring a search selection; keyboard focus and clicks inspect immediately. Pin info keeps inspection independent of search selections. Compact reference cards have a uniform height, in the table's central space on desktop and above the scrolling table on mobile. Selected chips appear at the top, and an expandable color guide explains ten chemical categories. PubChem reference values never imply database coverage.
 - Four distinct statistics with documented counting meanings, loading states, unavailable values, and error recovery.
 - API-backed record previews when configured; unsupported or missing data never generates fabricated records.
-- Honest Upcoming states for scientific tools; search filters are available as frontend controls with a reserved API contract. There are no fake charts, crystal structures, detail links, or stability labels.
+- Real structure-record workspaces and server-side search filters; scientific analysis features without source data retain explicit unavailable states. No stability labels are inferred.
 - A scroll-driven diamond-anvil introduction and staggered section fades across the application, with a full viewport reading area, five editable placeholder names, email contact entries and a map prepared for verified community statistics.
 - Independent documentation and updates page; unconfirmed methods, materials sources and citations are marked To be published. Interface history is separate from scientific data releases.
 - Batch contribution drafts for structures, Raman/XRD curves, physical properties and original attachments; multiple files/ZIP and explicit CSV mappings. Private by default, with separate processing consent. Save/reopen local batches, export/import original bytes, and inspect their preparation status in `/workspace`. Database mode supports real submission and review; VASP execution remains unconnected.
@@ -74,11 +78,11 @@ Leave `NEXT_PUBLIC_MATERIALS_API_BASE` unset until the independent backend is av
 
 Copy `.env.example` to `.env.local`, configure the API base, and restart the development server. Public environment variables must never contain secrets. Browser requests use same-origin credentials only. An external service must explicitly support the application's origin through CORS. Local password authentication is implemented; see docs/LOCAL_DATABASE.md for the active configuration.
 
-See [API contract](docs/API_CONTRACT.md). The documented endpoints are a proposed integration boundary, not claims about an existing backend.
+See [API contract](docs/API_CONTRACT.md) and [structure detail endpoints](docs/STRUCTURE_DETAILS.md). Active local endpoints and future contracts are distinguished.
 
 ## Scientific boundary and future work
 
-Phase 1 does not implement material details, linked scientific analysis charts, diffraction calculations, phase diagrams, database-record exports, or a Pressure Explorer. Contribution-file previews use only uploaded numerical values for preparation checks. None of these exist behind a misleading active link. Local contribution-draft export is available separately.
+The initial Phase 1 restriction on detail pages was superseded by the requested v17 structure workspace. Details and record exports are now implemented. Validated linked analysis charts, diffraction calculations, phase diagrams and stable-phase exploration still require scientific datasets and validation; missing results remain unavailable.
 
 See [Phase 2 architecture notes](docs/PHASE_2.md). Future pressure state belongs to a single material's exploration context, not the application shell. Exact records and available pressures must remain explicit.
 
@@ -171,3 +175,7 @@ Administrator statistics and card/list discovery results: [operation guide](docs
 ## Phase-based contributions (2026-10-14)
 
 Contribution drafts now use Phase → P–T condition → experimental/theoretical data records, with optional structures, explicit unknown conditions and grouped CSV/ZIP imports. The graph persists in PostgreSQL and appears in personal batches and reviewer views. Legacy drafts remain readable; importing a copy remaps identities. See [contribution model and current limits](docs/CONTRIBUTIONS.md) and [validation](docs/VALIDATION.md).
+
+## Unified contribution and administrator imports — 2026-10-17
+
+Administrators can open `/admin?section=imports` to load JSON/ZIP/manifest packages, validate them, save idempotent import drafts and reopen them in Contribute. New backend migration 005 and endpoints are required; deploying the frontend alone does not enable the new API. The backend CLI uses the same APIs and schema. See the backend `docs/UNIFIED_INGESTION.md` for commands and rollout instructions.

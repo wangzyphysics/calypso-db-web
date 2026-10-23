@@ -91,7 +91,7 @@ export function FeatureCard({
         <span className="feature-icon">
           <Icon size={26} strokeWidth={1.4} />
         </span>
-        <span className="status-label">Upcoming</span>
+        <span className="status-label">{href ? "Available" : "Upcoming"}</span>
       </div>
       <h3>{title}</h3>
       <p>{description}</p>

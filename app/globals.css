@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./accounts.css";
+@import "./structure-detail.css";
 .material-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 28px; font-size: 13px; color: var(--secondary-text); }
 .contributed-record-badge { font-size: 11px; line-height: 1.6; color: var(--secondary-text); }
 .contributed-record-badge span { color: #c0392b; font-size: 14px; }

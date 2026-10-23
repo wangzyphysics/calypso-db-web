@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { detailHref } from "@/lib/materials/detail";
 import { Button } from "@/components/ui/button";
 import {
   materialsClient,
@@ -73,9 +76,6 @@ const statsLoader = (signal: AbortSignal) => materialsClient.statistics(signal);
 export function useDatabaseStatistics() {
   return useResource<DatabaseStatistics>(statsLoader);
 }
-const numberFormat = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 2,
-});
 export function DatabaseOverview({
   resource,
 }: {
@@ -168,10 +168,10 @@ export function DatabaseOverview({
 }
 export function MaterialPreview({ record, index = 0 }: { record: MaterialRecord; index?: number }) {
   return (
-    <article className="material-card" tabIndex={0} style={{ animationDelay: `${Math.min(index, 5) * 45}ms` }}>
+    <article className="material-card" style={{ animationDelay: `${Math.min(index, 5) * 45}ms` }}>
       <div className="material-card-top">
         <h3>
-          <ChemicalFormula formula={record.formula} />
+          <Link href={detailHref(record.recordId)}><ChemicalFormula formula={record.formula} /></Link>
         </h3>
         <span className="record-pressure">
           {record.pressureGPa == null
@@ -180,7 +180,7 @@ export function MaterialPreview({ record, index = 0 }: { record: MaterialRecord;
         </span>
       </div>
       <p className="record-id" title={record.materialId}>{record.externalIds?.join(" · ") || record.materialId}</p>
-      {record.provenance === "contributed" && <p className="contributed-record-badge"><span aria-hidden="true">★</span> Reviewed contribution · {record.origin} · {record.dataType} · not standardized</p>}
+      {record.provenance === "contributed" && <p className="contributed-record-badge">{record.origin === "theoretical" && <span aria-hidden="true">★</span>} Reviewed contribution · {record.origin ?? "Origin unreported"} · {record.dataType} · {record.origin === "theoretical" ? "not standardized" : "source data"}</p>}
       <dl className="record-metadata">
         <div>
           <dt>Phase</dt>
@@ -197,7 +197,7 @@ export function MaterialPreview({ record, index = 0 }: { record: MaterialRecord;
       </dl>
       <div className="material-card-bottom">
         <span title={record.recordId}>Record {record.recordId}</span>
-        <span>Detail workspace · Upcoming</span>
+        <Link className="material-detail-link" href={detailHref(record.recordId)}>View record <ArrowUpRight size={13}/></Link>
       </div>
     </article>
   );

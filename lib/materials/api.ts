@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { detailSchema } from "./detail.ts";
 import {
   buildSearchParams,
   type SearchMode,
@@ -97,13 +98,13 @@ export type ResourceState<T> =
   | { status: "ready"; data: T }
   | {
       status: "error";
-      kind: "unauthorized" | "network" | "invalid";
+      kind: "unauthorized" | "network" | "invalid" | "not-found";
       message: string;
     };
 
 export class MaterialsApiError extends Error {
-  kind: "unauthorized" | "network" | "invalid";
-  constructor(kind: "unauthorized" | "network" | "invalid", message: string) {
+  kind: "unauthorized" | "network" | "invalid" | "not-found";
+  constructor(kind: "unauthorized" | "network" | "invalid" | "not-found", message: string) {
     super(message);
     this.kind = kind;
   }
@@ -147,6 +148,8 @@ export function createMaterialsClient(
         "unauthorized",
         "The data service requires authorization. Contact the database administrator.",
       );
+    if (response.status === 404)
+      throw new MaterialsApiError("not-found", "This record is unavailable or you do not have access to it.");
     if (!response.ok)
       throw new MaterialsApiError(
         "network",
@@ -163,6 +166,8 @@ export function createMaterialsClient(
   }
   return {
     configured: Boolean(base),
+    baseUrl: base ?? "",
+    detail: (recordId: string, signal?: AbortSignal) => request(`/records/${encodeURIComponent(recordId)}`, detailSchema, signal),
     statistics: (signal?: AbortSignal) =>
       request("/statistics", statisticsSchema, signal),
     previews: (signal?: AbortSignal) => request(process.env.NEXT_PUBLIC_MATERIALS_PREVIEW_PATH || "/materials?limit=6", materialsSchema, signal),

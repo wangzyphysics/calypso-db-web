@@ -11,6 +11,16 @@ export function contactHref(
 }
 export const platformUpdates = [
   {
+    date: "2026-10-18",
+    title: "Structure record workspaces",
+    changes: [
+      "Search cards and tables open authenticated record pages with interactive crystal geometry, cell parameters and paginated coordinates.",
+      "Display and calculation cells remain distinct; source energies retain their actual cell and unverified definition.",
+      "Explicit source-phase pressure records, contributor data visibility and original numerical data are preserved.",
+      "Authorized CIF, POSCAR, coordinate CSV and record JSON downloads; missing scientific results remain unavailable.",
+    ],
+  },
+  {
     date: "2026-10-16",
     title: "Reliable contribution drafts and original-file handling",
     changes: [

@@ -32,6 +32,12 @@ export function ContributionGuide() {
     <p>一个 Raman 文件可以含 shift、repeat_1、repeat_2 三列；两张记录共用 file，分别选择不同 Y 列。同理，介电实部和虚部可以分别建卡。Add another curve from this file 保留原文件一份。</p>
     <div className="guide-downloads"><a href="/upload-examples/teaching-data.zip" download className="secondary-link"><Download size={14}/>教学 ZIP：15 文件 / 17 记录</a><a href="/upload-examples/upload-guide-zh.md" download className="text-link">下载完整中文教程 <Download size={13}/></a></div>
     <p className="knowledge-note">只导入或查看教学 ZIP，不作为研究数据提交。多文件上限 100，单文件 10 MiB，原字节总计 50 MiB，最多 300 记录；数值预览最多 10,000 行、64 列。专有仪器文件和二维图片保留为附件。</p>
+    <h3 id="internal-imports">管理员导入与后端 CLI</h3>
+    <p>用户 Contribute 和管理员 Data imports 使用同一份清单、Phase → P–T → 数据记录契约及服务端检查。管理员可以上传 JSON、ZIP 或清单与原文件，先看校验报告，再保存草稿并沿用现有审核流程。</p>
+    <p>批量脚本在后端目录运行 <code>npm run data:ingest -- --help</code>。CLI 可从 CSV 和文件目录准备标准 JSON，也可读取 Contribute 导出的 JSON；通过网站账号登录 API，不直接连接数据库。认证配置使用本机私有文件，不能放进数据包或 Git。</p>
+    <pre className="guide-code"><code>{"npm run data:ingest -- prepare --manifest ./input/manifest.csv --directory ./input --metadata ./metadata.json --out ./package.json\nnpm run data:ingest -- check --input ./package.json"}</code></pre>
+    <p>来源命名空间和批次编号按登录账号隔离；相同编号及内容返回已有回执，不新增重复记录。内容修订请使用新的修订编号。上传不会自动公开、启动计算或证明相稳定性；网页和 CLI 沿用相同的文件/批次上限。</p>
+    <Link href="/admin?section=imports" className="text-link">Data imports · 需要管理员权限 <ArrowUpRight size={14}/></Link>
     <h3>条件与科学解释</h3>
     <ul className="guide-science-notes">
       <li><strong>Tc 是结果值，不能作为固定采集温度。</strong>记录实际取值判据、来源和原始测量证据；上传曲线不自动判定超导。</li>

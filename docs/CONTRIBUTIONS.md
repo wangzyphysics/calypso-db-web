@@ -94,3 +94,7 @@ PostgreSQL 以 draft_json 保存完整元数据，原字节在 files，记录在
 旧 v2 草稿读取时逐记录生成独立 Phase/条件容器，ID 确定且重读稳定，不回写原库；编辑保存后写 v3。原文件、记录 ID、方法、归属、私密范围与权限保留。v1 单结构 JSON 导入仍支持。导出后作为新批次导入时重新生成批次、Phase 和条件 ID，并完整映射关联，避免跨批次身份冲突。
 
 HTTP 路径保持 `/api/contributions/batches`、`/batches/:id`、`/:id/submit`、`/:id/events`、`/:id/files/:fileId`、`/admin/review` 与 `/:id/restore`；写操作保持认证、CSRF 和版本冲突检测。审核队列增补 phases / conditions，旧响应缺失时客户端按空数组兼容。
+
+## 用户与内部上传统一 — 2026-10-17（v16）
+
+管理员入口 `/admin?section=imports` 支持 JSON、ZIP+manifest 或清单+多文件，提供服务端校验预览、幂等导入回执和历史分页。保存后直接进入同一个 Contribute 编辑器，沿用提交、审核、私密范围及公开检索流程。普通用户原 API 保留，后台共同使用贡献 v3 校验和写入逻辑；内部上传不会绕过科学/文件校验或自动宣称标准化。CLI 和部署说明见相邻后端 `docs/UNIFIED_INGESTION.md`；运行 `npm run data:ingest -- --help`。原有科学库及身份不重写；单值直接录入、历史 ingest v1 无损适配和跨批次正式归相仍待后续实现。
